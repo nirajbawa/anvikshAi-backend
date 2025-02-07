@@ -1,6 +1,5 @@
 __pycache__/
 *.py[cod]
-# Virtual environment
 env/
 *.env
 *.venv
