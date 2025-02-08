@@ -1,34 +1,77 @@
 from fastapi import APIRouter, HTTPException
-import jwt
-from fastapi import Depends, FastAPI, HTTPException, Security, status
-from fastapi.responses import JSONResponse
-from fastapi.security import (
-    OAuth2PasswordBearer,
-    OAuth2PasswordRequestForm,
-    SecurityScopes,
-)
-from jwt.exceptions import InvalidTokenError
-from passlib.context import CryptContext
-from pydantic import BaseModel, ValidationError
-from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from schemas.user_schema import UserSchema
+from fastapi import Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from schemas.auth_schema import SignUpSchema, VerifyOTPSchema, SignInSchema, User, Onboarding
 from services.auth_service import AuthService
-from fastapi import status
+from fastapi import status, BackgroundTasks
+from core.security import get_current_active_user
+from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordRequestForm
 
 user_auth = APIRouter()
 
+
 @user_auth.post("/sign-up")
-async def sign_up(data: UserSchema):
-    print(data.email)
+async def sign_up(data: SignUpSchema, background_tasks: BackgroundTasks):
     if await AuthService.check_user_exists(data.email):
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
-        # return JSONResponse(status_code=400, content={"message": "User already exists"})
     try:
-        result = await AuthService.create_user(data)
-        print(result)
-        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": result, "status":"true"})
+        result = await AuthService.create_user(data, background_tasks)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": result,  "status": True})
     except Exception as e:
         print(e)
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
+@user_auth.post("/verify")
+async def verify(data: VerifyOTPSchema):
+    if await AuthService.check_user_exists(data.email):
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already exists")
+    try:
+        result = await AuthService.verify_otp(data.email, data.otp)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": result,  "status": True})
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@user_auth.post("/sign-in")
+async def verify(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    print(data)
+    try:
+       
+        result = await AuthService.sign_in(data)
+        return result
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@user_auth.get("/get-current-user")
+async def get_current_user(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    try:
+        return current_user
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@user_auth.get("/onboarding")
+async def is_onboarding_completed(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    try:
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "on boarding is remaining", "data":{"onboarding": current_user.onboarding}})
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+@user_auth.post("/onboarding")
+async def onboarding(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    data:  Onboarding
+):
+    try:
+        result = await AuthService.onboarding(current_user.email, data)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": result,  "status": True})
+    except Exception as e:
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

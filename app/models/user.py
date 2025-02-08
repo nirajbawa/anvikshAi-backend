@@ -1,36 +1,36 @@
-from enum import Enum
-from beanie import Document, Indexed
-from pydantic import BaseModel, Field, EmailStr
+from typing import Optional
 from datetime import datetime
+from pydantic import EmailStr, Field
+from beanie import Document, Indexed
+from enum import Enum
 
-# 🎯 Enum for Education Choices
+# Define Enums
 class EducationLevel(str, Enum):
+    HIGH_SCHOOL = "High School"
     BACHELORS = "Bachelors"
     MASTERS = "Masters"
     PHD = "PhD"
 
-# 🎯 Enum for Language Preferences
 class LanguagePreference(str, Enum):
     ENGLISH = "English"
     HINDI = "Hindi"
+    MARATHI = "Marathi"
 
 class UserModel(Document):
-    email: EmailStr = Indexed(unique=True)  # Ensure uniqueness in MongoDB
+    email: EmailStr = Indexed(unique=True)  # Ensure uniqueness
     password: str
-    first_name: str = Field(..., min_length=3)
-    last_name: str = Field(..., min_length=3)
-    dob: datetime
-    bio: str = Field(..., min_length=300, max_length=1000)
-    education: EducationLevel 
-    stream_of_education: str = Field(..., min_length=5)  # Adjusted min_length
-    language_preference: LanguagePreference  
-    verified: bool = False
-    verify_code: str = Field(..., min_length=6, max_length=6)  # Security fix
-    expiry_time: datetime =  Field(...)
+    first_name: Optional[str] = Field(min_length=3, default=None)
+    last_name: Optional[str] = Field(min_length=3, default=None)
+    dob: Optional[datetime] = None  # ✅ Now Optional
+    bio: Optional[str] = Field(min_length=300, max_length=1000, default=None)
+    education: Optional[EducationLevel] = None  # ✅ Now Optional
+    stream_of_education: Optional[str] = Field(min_length=5, default=None)  # ✅ Default Empty String
+    language_preference: Optional[LanguagePreference] = None  # ✅ Now Optional
+    verified: bool = Field(default=False)
+    verify_code: str = Field(min_length=6, max_length=6)
+    expiry_time: datetime = Field(default_factory=datetime.utcnow)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    onboarding: bool = Field(default=False)
 
     class Settings:
         collection = "users"
-        indexes = [
-            "email",  # Unique email index
-        ]

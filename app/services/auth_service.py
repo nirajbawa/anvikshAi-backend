@@ -1,65 +1,72 @@
 from models.user import UserModel
-from core.security import hash_password
-from schemas.user_schema import UserSchema
+from core.security import hash_password, verify_password, create_jwt_token
 from fastapi_mail import FastMail, MessageSchema
 from core.email import conf
 from fastapi.templating import Jinja2Templates
-from schemas.user_schema import EmailBodySchema
+from schemas.auth_schema import EmailBodySchema, SignUpSchema, Onboarding, Token
 from core.otp_generator import generate_otp
-from fastapi import HTTPException
-from datetime import datetime, timedelta
+from fastapi import HTTPException, BackgroundTasks
+from datetime import datetime, timedelta, timezone
+import os
+
 
 templates = Jinja2Templates(directory="app/email_templates")
+
+
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
 
 class AuthService:
     @staticmethod
     async def check_user_exists(user_email: str) -> bool:
-        user = await UserModel.find_one({"email": user_email})
+        user = await UserModel.find_one({"email": user_email, "verified": True})
         if user:
             return True
         return False
-    
+
     @staticmethod
-    async def create_user(data: UserSchema) -> str:
+    async def create_user(data: SignUpSchema, background_tasks: BackgroundTasks) -> str:
         try:
-          
             password = hash_password(data.password)
             otp = generate_otp(6)
 
-            user = UserModel(
-                email=data.email, 
-                password=password, 
-                first_name=data.first_name, 
-                last_name=data.last_name,
-                dob=data.dob, 
-                bio=data.bio, 
-                education=data.education, 
-                stream_of_education=data.stream_of_education,
-                language_preference=data.language_preference,
-                verified=False,
-                expiry_time=datetime.utcnow() + timedelta(minutes=3),
-                verify_code=otp  # Storing generated OTP
-            )
-            await user.insert()  # Corrected insertion
+            if await UserModel.find_one({"email": data.email, "verified": False}):
+                await UserModel.find({"email": data.email, "verified": False}).update(
+                    {"$set": {
+                     "password": password,
+                     "verify_code": otp,
+                     "expiry_time": datetime.now(timezone.utc) + timedelta(minutes=3)
+                     }})
+            else:
+                user = UserModel(
+                    email=data.email,
+                    password=password,
+                    verified=False,
+                    expiry_time=datetime.now(
+                        timezone.utc) + timedelta(minutes=3),
+                    verify_code=otp  # Storing generated OTP
+                )
+                await user.insert()  # Correct  ed insertion
 
             # Send OTP email
-            email_body = EmailBodySchema(user_name=data.first_name, otp=otp)
-            await AuthService.send_email(data.email, "Email Verification", email_body)
-            
+            email_body = EmailBodySchema(otp=otp)
+            background_tasks.add_task(
+                AuthService.send_email, data.email, "Email Verification", email_body)
+
             return "Please verify your email. Check your inbox for the verification code."
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     @staticmethod
     async def send_email(recipient: str, subject: str, body: EmailBodySchema) -> None:
         template_data = {
-            "user_name": body.user_name,
             "otp_code": body.otp,
         }
-            
-        html_content = templates.get_template("otp_email.html").render(template_data)
-        
+
+        html_content = templates.get_template(
+            "otp_email.html").render(template_data)
+
         message = MessageSchema(
             recipients=[recipient],
             subject=subject,
@@ -68,5 +75,57 @@ class AuthService:
         )
 
         mail = FastMail(conf)
-        mail = await mail.send_message(message)
-        print(mail)
+        await mail.send_message(message)
+
+    @staticmethod
+    async def verify_otp(email: str, otp: str):
+        try:
+            user = await UserModel.find_one({"email": email, "verify_code": otp, "verified": False})
+
+            if not user:
+                raise HTTPException(
+                    status_code=400, detail="Invalid OTP or user not found.")
+
+            # Check OTP expiration
+            if user.expiry_time < datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=400, detail="OTP expired. Please request a new OTP.")
+
+            # Update user verification status
+            user.verified = True
+            await user.save()  # ✅ Save changes to the database
+
+            return "Email verified successfully!"
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    async def sign_in(data) -> dict | Exception:
+        user = await UserModel.find_one({"email": data.username, "verified": True})
+        if not user:
+            raise HTTPException(status_code=400, detail="Invalid email.")
+        if not verify_password(data.password, user.password):
+            raise HTTPException(
+                status_code=400, detail="Invalid email or password.")
+
+        token = create_jwt_token({"sub": user.email}, os.getenv(
+            "SECRET_KEY"), timedelta(days=ACCESS_TOKEN_EXPIRE_MINUTES))
+
+        return Token(access_token=token, token_type="bearer")
+
+    @staticmethod
+    async def onboarding(email, data: Onboarding) -> str:
+        result = await UserModel.find({"email": email}).update(
+            {"$set": {
+                "first_name": data.first_name,
+                "last_name": data.last_name,
+                "dob": data.dob,
+                "bio": data.bio,
+                "education": data.education,
+                "stream_of_education": data.stream_of_education,
+                "language_preference": data.language_preference,
+                "onboarding": True
+            }})
+        if result.modified_count == 0:
+            raise HTTPException(status_code=400, detail="User not found.")
+        return "Onboarding completed successfully!"

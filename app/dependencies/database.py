@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv() 
 
-MONGO_URI = os.getenv("MONGO_URI", os.getenv("DATABASE_URI"))
+MONGO_URI = os.getenv("DATABASE_URI")
 
 async def init_db():
     client = AsyncIOMotorClient(MONGO_URI)
