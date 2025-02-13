@@ -65,6 +65,7 @@ async def is_onboarding_completed(
     except Exception as e:
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+
 @user_auth.post("/onboarding")
 async def onboarding(
     current_user: Annotated[User, Depends(get_current_active_user)],
