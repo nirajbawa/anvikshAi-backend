@@ -19,7 +19,7 @@ class DayTaskSchema(BaseModel):
 # Task Model
 class TaskModel(Document):
     task_name: str = Field(min_length=3, max_length=100)
-    description: Optional[str] = Field(None, min_length=10, max_length=2000)
+    description: str = Field(None, min_length=10, max_length=2000)
     expected_duration_months: int = Field(gt=0, description="Duration in months") 
     daily_hours: float = Field(gt=0, le=24, description="Hours spent daily")  
     language: TaskLanguage
@@ -29,6 +29,7 @@ class TaskModel(Document):
     completed: Optional[bool] = Field(default=False)
     total_duration_in_days: Optional[int] = None
     user: Link[UserModel]  # Link to the UserModel
-
+    generated_roadmap_text: Optional[str] = None
+    
     class Settings:
         collection = "tasks"
