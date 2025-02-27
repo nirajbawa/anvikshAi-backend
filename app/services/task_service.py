@@ -137,14 +137,22 @@ class TaskService:
             )
 
             chat_response = chat(messages)
-
-            print(chat_response)
             cleaned_output = TaskService.clean_json_output(chat_response)
             day_wise_task = json.loads(cleaned_output)
+
+            messages = (
+                f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}."
+                f"identify the major phases, and return them as a pure JSON array without any extra formatting. "
+            )
+
+            chat_response = chat(messages)
+            cleaned_output = TaskService.clean_json_output(chat_response)
+            roadmap_phases = json.loads(cleaned_output)
 
             await is_task_exists.update({
                 "$set": {
                     "day_wise_tasks": day_wise_task,
+                    'roadmap_phases': roadmap_phases,
                     "accepted": True
                 }
             })
