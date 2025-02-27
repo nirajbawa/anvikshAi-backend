@@ -24,12 +24,14 @@ class AuthService:
         try:
             password = hash_password(data.password)
             otp = generate_otp(6)
-            expiry_time = datetime.now(timezone.utc) + timedelta(minutes=3)  # ✅ Ensure UTC timezone
+            expiry_time = datetime.now(
+                timezone.utc) + timedelta(minutes=3)  # ✅ Ensure UTC timezone
 
             existing_user = await UserModel.find_one({"email": data.email, "verified": False})
             if existing_user:
                 await existing_user.update(
-                    {"$set": {"password": password, "verify_code": otp, "expiry_time": expiry_time}}
+                    {"$set": {"password": password, "verify_code": otp,
+                              "expiry_time": expiry_time}}
                 )
             else:
                 user = UserModel(
@@ -40,7 +42,8 @@ class AuthService:
 
             # Send OTP email
             email_body = EmailBodySchema(otp=otp)
-            background_tasks.add_task(AuthService.send_email, data.email, "Email Verification", email_body)
+            background_tasks.add_task(
+                AuthService.send_email, data.email, "Email Verification", email_body)
 
             return "Please verify your email. Check your inbox for the verification code."
 
@@ -50,10 +53,12 @@ class AuthService:
     @staticmethod
     async def send_email(recipient: str, subject: str, body: EmailBodySchema) -> None:
         template_data = {"otp_code": body.otp}
-        html_content = templates.get_template("otp_email.html").render(template_data)
+        html_content = templates.get_template(
+            "otp_email.html").render(template_data)
 
         message = MessageSchema(
-            recipients=[recipient], subject=subject, body=html_content, subtype="html"
+            recipients=[
+                recipient], subject=subject, body=html_content, subtype="html"
         )
 
         mail = FastMail(conf)
@@ -64,11 +69,13 @@ class AuthService:
         try:
             user = await UserModel.find_one({"email": email, "verify_code": otp, "verified": False})
             if not user:
-                raise HTTPException(status_code=400, detail="Invalid OTP or user not found.")
+                raise HTTPException(
+                    status_code=400, detail="Invalid OTP or user not found.")
 
             # ✅ Ensure both datetime values have timezone info
             if user.expiry_time.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-                raise HTTPException(status_code=400, detail="OTP expired. Please request a new OTP.")
+                raise HTTPException(
+                    status_code=400, detail="OTP expired. Please request a new OTP.")
 
             user.verified = True
             await user.save()
@@ -83,18 +90,23 @@ class AuthService:
         if not user:
             raise HTTPException(status_code=400, detail="Invalid email.")
         if not verify_password(data.password, user.password):
-            raise HTTPException(status_code=400, detail="Invalid email or password.")
+            raise HTTPException(
+                status_code=400, detail="Invalid email or password.")
 
-        token = create_jwt_token({"sub": user.email}, os.getenv("SECRET_KEY"), timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-        return Token(access_token=token, token_type="bearer").dict()  # ✅ Fix: Convert to dict before returning
+        token = create_jwt_token({"sub": user.email}, os.getenv(
+            "SECRET_KEY"), timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        # ✅ Fix: Convert to dict before returning
+        return Token(access_token=token, token_type="bearer").dict()
 
     @staticmethod
     async def onboarding(email, data: Onboarding) -> str:
+        plan_expiry_date = datetime.now(
+            timezone.utc) + timedelta(days=30)  # ✅ Ensure UTC timezone
         result = await UserModel.find_one({"email": email}).update(
             {"$set": {
                 "first_name": data.first_name, "last_name": data.last_name, "dob": data.dob,
                 "bio": data.bio, "education": data.education, "stream_of_education": data.stream_of_education,
-                "language_preference": data.language_preference, "onboarding": True
+                "language_preference": data.language_preference, "onboarding": True, "validTill": plan_expiry_date
             }}
         )
         if result.modified_count == 0:
