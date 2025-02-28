@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from dependencies.database import init_db
 from api.v1.routes.user_auth import user_auth
 from api.v1.routes.tasks import task
+from api.v1.routes.content import content
 from fastapi import FastAPI
 from dotenv import load_dotenv
 load_dotenv()
@@ -40,7 +41,7 @@ def read_root():
 
 app.include_router(user_auth, prefix="/auth", tags=["Authentication"])
 app.include_router(task, prefix="/task", tags=["Tasks"])
-
+app.include_router(content, prefix="/content", tags=["Content"])
 
 # uvicorn app.main:app --reload
 # fastapi dev app/main.py

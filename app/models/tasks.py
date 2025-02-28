@@ -6,17 +6,23 @@ from enum import Enum
 from models.user import UserModel
 
 # Task Language Enum
+
+
 class TaskLanguage(str, Enum):
     ENGLISH = "English"
     HINDI = "Hindi"
 
 # Change DayTaskSchema to a Pydantic Model (BaseModel instead of Document)
+
+
 class DayTaskSchema(BaseModel):
     day: int = Field(gt=0, description="Day number (should be positive)")
     topics: str = Field(min_length=3, max_length=500)
     status: bool = Field(default=False, description="Completion status")
 
 # Task Model
+
+
 class TaskModel(Document):
     task_name: str = Field(min_length=3, max_length=100)
     description: str = Field(None, min_length=10, max_length=2000)
@@ -26,15 +32,15 @@ class TaskModel(Document):
     language: TaskLanguage
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
-    day_wise_tasks: Optional[List[DayTaskSchema]] = Field(
-        default=[], description="List of daily tasks")
     roadmap_description: Optional[str] = None
     completed: Optional[bool] = Field(default=False)
     total_duration_in_days: Optional[int] = None
     user: Optional[PydanticObjectId] = None
     generated_roadmap_text: Optional[str] = None
     accepted: Optional[bool] = False
-    roadmap_phases: Optional[List] = Field(default=[], description="List of roadmap phases")
+    roadmap_phases: Optional[List] = Field(
+        default=[], description="List of roadmap phases")
 
     class Settings:
+        json_encoders = {PydanticObjectId: str}
         collection = "tasks"

@@ -7,6 +7,8 @@ from core.chat_gpt import chat
 from datetime import datetime, timedelta, timezone
 from models.user import PremiumPackage
 import json
+from models.day import DayModel
+import json
 
 
 class TaskService:
@@ -122,7 +124,6 @@ class TaskService:
                 {"_id": PydanticObjectId(
                     task_id), "accepted": False, "user": PydanticObjectId(current_user.id)}
             )
-            print(is_task_exists)
             if (not is_task_exists):
                 raise HTTPException(
                     status_code=404,
@@ -133,12 +134,26 @@ class TaskService:
                 f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
                 f"Divide the topics over {is_task_exists.expected_duration_months * 30} days, considering {is_task_exists.daily_hours} hours of study per day. "
                 "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
-                "Return the output in JSON format with fields: 'day', 'topics', 'status:'false'. (make sure output is under the token limit)"
+                "Return the output in JSON format with fields: 'day', 'topics'. (make sure output is under the token limit)"
             )
 
             chat_response = chat(messages)
             cleaned_output = TaskService.clean_json_output(chat_response)
             day_wise_task = json.loads(cleaned_output)
+
+            day_entries = [
+                DayModel(
+                    day=day_data["day"],
+                    topics=day_data["topics"],
+                    status=False,
+                    belongs_to=PydanticObjectId(task_id),
+                    user=PydanticObjectId(current_user.id)
+                )
+                for day_data in day_wise_task
+            ]
+
+            # Bulk insert
+            await DayModel.insert_many(day_entries)
 
             messages = (
                 f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}."
@@ -151,13 +166,59 @@ class TaskService:
 
             await is_task_exists.update({
                 "$set": {
-                    "day_wise_tasks": day_wise_task,
-                    'roadmap_phases': roadmap_phases,
+                    "roadmap_phases": roadmap_phases,
                     "accepted": True
                 }
             })
 
-            return {"message": "Task created successfully", "status_code": 200}
+            return {"message": "Task created successfully"}
+
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail="Internal Server Error")
+
+    async def get_tasks(current_user: dict) -> dict:
+        try:
+
+            is_task_exists = await TaskModel.find(
+                {"accepted": True, "user": PydanticObjectId(current_user.id)}
+            ).to_list()
+
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No task exists"
+                )
+
+            data = [json.loads(task.model_dump_json())
+                    for task in is_task_exists]
+
+            return {"message": "Tasks fetched successfully", "data": data}
+
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail="Internal Server Error")
+
+    async def get_task(current_user: dict, taskId: str) -> dict:
+        try:
+
+            is_task_exists = await TaskModel.find_one(
+                {"_id": PydanticObjectId(
+                    taskId), "accepted": True, "user": PydanticObjectId(current_user.id)}
+            )
+
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No task exists"
+                )
+
+            data = json.loads(is_task_exists.model_dump_json())
+            return {"message": "Task fetched successfully", "data": data}
 
         except Exception as e:
             # Logs the full error traceback

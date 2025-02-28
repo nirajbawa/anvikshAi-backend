@@ -1,131 +1,28 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, File, UploadFile
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from schemas.auth_schema import User
 from fastapi import status
 from core.security import get_current_active_user
-from schemas.tasks_schema import TaskCreate, TaskAccept
-from services.task_service import TaskService
-from services.day_n_task_service import DayNTaskSerivce
+from services.content_service import ContentService
+from schemas.content_schema import ContentStatus, QuizStatus, Feedback
+import PyPDF2
+import io
 
 
-task = APIRouter()
+content = APIRouter()
 
 
-@task.post("/create-task")
-async def create_task(
+@content.get("/video/{dayId}")
+async def get_video(
     current_user: Annotated[User, Depends(get_current_active_user)],
-    data: TaskCreate
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-        result = await TaskService.create_task(current_user, data)
-        return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.post("/accept-task/{task_id}")
-async def accept_task(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    task_id: str,
-    data: TaskAccept
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await TaskService.accept_task(current_user, data, task_id)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.post("/create-day-{dayn}-task-{task_id}")
-async def create_d_n_task(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    dayn: str,
-    task_id: str
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await DayNTaskSerivce.create_day_n_task(current_user, dayn, task_id)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.get("/")
-async def get_tasks(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await TaskService.get_tasks(current_user)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.get("/{taskId}")
-async def get_task(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    taskId: str
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await TaskService.get_task(current_user, taskId)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.get("/days/{taskId}")
-async def get_days(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    taskId: str
-):
-    try:
-        if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await DayNTaskSerivce.get_days(current_user, taskId)
-        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
-
-    except Exception as e:
-        print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
-
-@task.get("/day/{taskId}/{dayId}")
-async def get_day(
-    current_user: Annotated[User, Depends(get_current_active_user)],
-    taskId: str,
     dayId: str
 ):
     try:
         if (current_user.onboarding == False):
             return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-
-        result = await DayNTaskSerivce.get_day(current_user, taskId, dayId)
+        result = await ContentService.get_video(current_user, dayId)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
@@ -133,4 +30,144 @@ async def get_day(
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@content.get("/article/{dayId}")
+async def get_article(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.get_article(current_user, dayId)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.get("/quiz/{dayId}")
+async def get_quiz(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.get_quiz(current_user, dayId)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.get("/assignment/{dayId}")
+async def get_assignment(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.get_assignment(current_user, dayId)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.post("/video/{dayId}")
+async def set_video_status(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str,
+    data: ContentStatus
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.set_video_status(current_user, dayId, data)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.post("/article/{dayId}")
+async def set_article_status(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str,
+    data: ContentStatus
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.set_video_status(current_user, dayId, data)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.post("/quiz/{dayId}")
+async def set_article_status(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str,
+    data: QuizStatus
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.set_quiz_status(current_user, dayId, data)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.post("/assignment/{dayId}")
+async def set_article_status(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str,
+    file: UploadFile = File(...),
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+
+        contents = await file.read()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
+
+        # Extract text from each page
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+
+        result = await ContentService.set_assigment_status(current_user, dayId, text)
+
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@content.post("/feedback/{dayId}")
+async def get_feedback(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    dayId: str,
+    data: Feedback
+):
+    try:
+        if (current_user.onboarding == False):
+            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+        result = await ContentService.get_feedback(current_user, dayId, data)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

@@ -39,7 +39,7 @@ async def verify(data: VerifyOTPSchema):
 async def verify(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     print(data)
     try:
-       
+
         result = await AuthService.sign_in(data)
         return result
     except Exception as e:
@@ -61,7 +61,7 @@ async def is_onboarding_completed(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "on boarding is remaining", "data":{"onboarding": current_user.onboarding}})
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "on boarding is status", "data": {"onboarding": current_user.onboarding}})
     except Exception as e:
         return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
