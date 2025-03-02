@@ -14,7 +14,7 @@ class DayModel(Document):
     description: Optional[str] = Field(None, min_length=10, max_length=2000)
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
-    feedback:  Optional[str] = Field(None, min_length=10, max_length=2000)
+    feedback:  Optional[str] = Field(None, min_length=10)
     content: Optional[bool] = Field(
         default=False, description="Completion status")
     user: PydanticObjectId = None

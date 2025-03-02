@@ -319,10 +319,11 @@ class ContentService:
                 f"question : {is_assign_exists.assinments_question}"
                 f"submition: {assignment}"
                 f"Assign marks out of 10 based on the quality and completeness of the answer. "
-                f"Return the output in pure JSON format, like this: {{\"marks\": int}}"
+                f"Strictly return the output in pure JSON format, like this: {{\"marks\": int}}"
             )
 
             chat_response = chat(messages)
+            print(chat_response)
             cleaned_output = TaskService.clean_json_output(chat_response)
             chat_out = json.loads(cleaned_output)
 
@@ -353,7 +354,7 @@ class ContentService:
                 }
             })
 
-            return {"message": "Video updated successfully", "data": data, "marks": chat_out["marks"]}
+            return {"message": "assginment updated successfully", "data": data, "marks": chat_out["marks"]}
 
         except Exception as e:
             # Logs the full error traceback
@@ -376,18 +377,18 @@ class ContentService:
                 )
 
             messages = (
-                f"You are an assignment feedback chat agent. Your task is to analyze the given data, provide feedback, and answer the user's query. "
-                f"Consider the following details: "
-                f"Previous feedback: {str(day.feedback)}"
-                f"Previous 3 (max) chat messages: {str(data)} "
-                f"Return the output in pure JSON format, like this: {{\"answer\": \"Your feedback here\"}}"
+                "You are a roadmap chat agent. Your task is to analyze the given data, provide feedback, and answer the user's query. "
+                "Consider the following details: "
+                f"- Previous feedback about their task performance: {str(day.feedback)}\n"
+                f"- Previous user task scores: {str(data)}\n"
+                "Strictly return the output in pure JSON format, like this: {\"answer\": \"your answer here\"}"
             )
 
             chat_response = chat(messages)
             cleaned_output = TaskService.clean_json_output(chat_response)
             chat_out = json.loads(cleaned_output)
 
-            return {"message": "feedback updated successfully", "data": chat_out}
+            return {"message": "feedback successfully", "data": chat_out}
 
         except Exception as e:
             # Logs the full error traceback
@@ -405,7 +406,7 @@ class ContentService:
                 f"Name of task: {str(task_name)} "
                 f"Status of task: {str(task_status)} "
                 f"Score of task: {str(task_score)} "
-                f"Return the output in pure JSON format, like this: {{\"feedback\": \"Your feedback here\"}}"
+                f"Strictly Return the output in pure JSON format, like this: {{\"feedback\": \"Your feedback here\"}}"
             )
 
             chat_response = chat(messages)

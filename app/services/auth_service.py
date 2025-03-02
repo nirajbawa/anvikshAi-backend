@@ -11,7 +11,7 @@ import os
 
 templates = Jinja2Templates(directory="app/email_templates")
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # ✅ Fix: Use minutes, not days
+ACCESS_TOKEN_EXPIRE_MINUTES = 43200  # ✅ Fix: Use minutes, not days
 
 
 class AuthService:

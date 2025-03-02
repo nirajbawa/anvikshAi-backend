@@ -1,5 +1,6 @@
 import google.generativeai as genai
 import os
+from openai import OpenAI
 
 
 def chat(data: str):
@@ -17,3 +18,20 @@ def chat(data: str):
         return full_output
     except Exception as e:
         return {"error": str(e)}
+
+
+def chat_gpt(data):
+
+    client = OpenAI(
+        api_key=os.getenv("CHAT_GPT")
+    )
+
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        store=True,
+        messages=[
+            {"role": "user", "content": data}
+        ]
+    )
+
+    print(completion.choices[0].message)

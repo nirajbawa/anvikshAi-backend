@@ -21,13 +21,15 @@ async def get_video(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.get_video(current_user, dayId)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.get("/article/{dayId}")
@@ -37,13 +39,15 @@ async def get_article(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.get_article(current_user, dayId)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.get("/quiz/{dayId}")
@@ -53,13 +57,15 @@ async def get_quiz(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.get_quiz(current_user, dayId)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.get("/assignment/{dayId}")
@@ -69,13 +75,15 @@ async def get_assignment(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.get_assignment(current_user, dayId)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.post("/video/{dayId}")
@@ -86,13 +94,15 @@ async def set_video_status(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.set_video_status(current_user, dayId, data)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.post("/article/{dayId}")
@@ -103,41 +113,46 @@ async def set_article_status(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
-        result = await ContentService.set_video_status(current_user, dayId, data)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await ContentService.set_article_status(current_user, dayId, data)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.post("/quiz/{dayId}")
-async def set_article_status(
+async def set_quiz_status(
     current_user: Annotated[User, Depends(get_current_active_user)],
     dayId: str,
     data: QuizStatus
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.set_quiz_status(current_user, dayId, data)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.post("/assignment/{dayId}")
-async def set_article_status(
+async def set_assignmnet_status(
     current_user: Annotated[User, Depends(get_current_active_user)],
     dayId: str,
     file: UploadFile = File(...),
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
 
         contents = await file.read()
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
@@ -147,13 +162,16 @@ async def set_article_status(
         for page in pdf_reader.pages:
             text += page.extract_text()
 
+        print(text)
+
         result = await ContentService.set_assigment_status(current_user, dayId, text)
 
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @content.post("/feedback/{dayId}")
@@ -164,10 +182,12 @@ async def get_feedback(
 ):
     try:
         if (current_user.onboarding == False):
-            return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please complete onboarding first")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
         result = await ContentService.get_feedback(current_user, dayId, data)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
         print("error : ", e)
-        return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

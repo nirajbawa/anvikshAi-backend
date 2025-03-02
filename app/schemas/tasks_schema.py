@@ -18,4 +18,10 @@ class TaskCreate(BaseModel):
 
 
 class TaskAccept(BaseModel):
-    accept: bool = Field(..., description="Indicates whether the user accepts the generated task")
+    accept: bool = Field(...,
+                         description="Indicates whether the user accepts the generated task")
+
+
+class UpdateDay(BaseModel):
+    status: bool = Field(...,
+                         description="Indicates whether the day is completed")

@@ -77,7 +77,7 @@ class TaskService:
             messages = (
                 "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
                 "The user will provide a task description, expected duration (in months), daily study hours, and educational background. "
-                "Generate a step-by-step roadmap with milestones, weekly goals. Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+                "Generate a step-by-step roadmap with milestones in short not give in details. Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
                 f"Task: {data.description}\n"
                 f"Duration: {data.expected_duration_months} months\n"
                 f"Daily Hours: {data.daily_hours} hours\n"
@@ -105,7 +105,7 @@ class TaskService:
             # Logs the full error traceback
             print(f"Error: {traceback.format_exc()}")
             raise HTTPException(
-                status_code=500, detail="Internal Server Error")
+                status_code=500, detail=str(e))
 
     @staticmethod
     def clean_json_output(output: str) -> str:
@@ -134,7 +134,7 @@ class TaskService:
                 f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
                 f"Divide the topics over {is_task_exists.expected_duration_months * 30} days, considering {is_task_exists.daily_hours} hours of study per day. "
                 "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
-                "Return the output in JSON format with fields: 'day', 'topics'. (make sure output is under the token limit)"
+                "strictly Return the output in JSON format with fields: 'day', 'topics'. (make sure output is under the token limit)"
             )
 
             chat_response = chat(messages)
@@ -156,10 +156,10 @@ class TaskService:
             await DayModel.insert_many(day_entries)
 
             messages = (
-                f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}."
-                f"identify the major phases, and return them as a pure JSON array without any extra formatting. "
+                f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}. "
+                f"Identify the major phases, and strictly return them as a pure JSON array like this: "
+                f'[{{"topic": "title", "description": "in one line"}}]'
             )
-
             chat_response = chat(messages)
             cleaned_output = TaskService.clean_json_output(chat_response)
             roadmap_phases = json.loads(cleaned_output)
@@ -177,8 +177,9 @@ class TaskService:
             # Logs the full error traceback
             print(f"Error: {traceback.format_exc()}")
             raise HTTPException(
-                status_code=500, detail="Internal Server Error")
+                status_code=500, detail=str(e))
 
+    @staticmethod
     async def get_tasks(current_user: dict) -> dict:
         try:
 
@@ -203,6 +204,7 @@ class TaskService:
             raise HTTPException(
                 status_code=500, detail="Internal Server Error")
 
+    @staticmethod
     async def get_task(current_user: dict, taskId: str) -> dict:
         try:
 
@@ -224,4 +226,42 @@ class TaskService:
             # Logs the full error traceback
             print(f"Error: {traceback.format_exc()}")
             raise HTTPException(
-                status_code=500, detail="Internal Server Error")
+                status_code=500, detail=str(e))
+
+    @staticmethod
+    async def task_progress(current_user: dict, taskId: str) -> dict:
+        try:
+
+            is_task_exists = await TaskModel.find_one(
+                {"_id": PydanticObjectId(
+                    taskId), "accepted": True, "user": PydanticObjectId(current_user.id)}
+            )
+
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No task exists"
+                )
+
+            completed_days = await DayModel.find_one(
+                {"belongs_to": PydanticObjectId(
+                    taskId), "status": True, "user": PydanticObjectId(current_user.id)}
+            ).count()
+
+            total_days = await DayModel.find_one(
+                {"belongs_to": PydanticObjectId(
+                    taskId),  "user": PydanticObjectId(current_user.id)}
+            ).count()
+
+            data = {
+                "completed_days": completed_days,
+                "total_days": total_days
+            }
+
+            return {"message": "Task progess fetched successfully", "data": data}
+
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail=str(e))
