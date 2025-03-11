@@ -340,7 +340,7 @@ class ContentService:
                 )
 
             feedback = await ContentService.generate_feedback(
-                day.feedback, f"task name : solve suggested assignment based on {str(day.topics)}", True, f"{chat_out["marks"]}/10")
+                day.feedback, f"task name : solve suggested assignment based on {str(day.topics)}", True, f"{chat_out['marks']}/10")
 
             await day.update({
                 "$set": {
