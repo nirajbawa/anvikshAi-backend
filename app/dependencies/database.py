@@ -1,13 +1,13 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
-from models.user import UserModel
-from models.tasks import TaskModel
-from models.day import DayModel
-from models.videos import VideoModel
-from models.articles import ArticleModel
-from models.assignments import AssignmentModel
-from models.quizzes import QuizModel
-from models.certificates import CertificateModel
+from app.models.user import UserModel
+from app.models.tasks import TaskModel
+from app.models.day import DayModel
+from app.models.videos import VideoModel
+from app.models.articles import ArticleModel
+from app.models.assignments import AssignmentModel
+from app.models.quizzes import QuizModel
+from app.models.certificates import CertificateModel
 import os
 from dotenv import load_dotenv
 

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pydantic import Field, BaseModel
 from beanie import Document, Link, PydanticObjectId
 from enum import Enum
-from models.user import UserModel
+from app.models.user import UserModel
 
 # Task Language Enum
 

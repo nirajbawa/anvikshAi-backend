@@ -1,19 +1,19 @@
-from schemas.tasks_schema import TaskCreate, TaskAccept
-from models.tasks import TaskModel
+from app.schemas.tasks_schema import TaskCreate, TaskAccept
+from app.models.tasks import TaskModel
 from beanie import PydanticObjectId
 from fastapi import HTTPException
 import traceback
-from core.chat_gpt import chat
+from app.core.chat_gpt import chat
 from datetime import datetime, timezone, date
-from models.user import PremiumPackage
+from app.models.user import PremiumPackage
 import json
-from models.day import DayModel
+from app.models.day import DayModel
 import json
 from weasyprint import HTML
 from fastapi.templating import Jinja2Templates
 import os
 import uuid
-from models.certificates import CertificateModel
+from app.models.certificates import CertificateModel
 
 templates = Jinja2Templates(directory="app/certificate_template")
 CERTIFICATES_DIR = "app/certificate_template"

@@ -1,7 +1,7 @@
 from enum import Enum
 from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
-from models.user import EducationLevel, LanguagePreference
+from app.models.user import EducationLevel, LanguagePreference
 from fastapi import Form
 
 

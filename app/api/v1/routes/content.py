@@ -2,11 +2,11 @@ from fastapi import APIRouter, HTTPException, File, UploadFile
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from schemas.auth_schema import User
+from app.schemas.auth_schema import User
 from fastapi import status
-from core.security import get_current_active_user
-from services.content_service import ContentService
-from schemas.content_schema import ContentStatus, QuizStatus, Feedback
+from app.core.security import get_current_active_user
+from app.services.content_service import ContentService
+from app.schemas.content_schema import ContentStatus, QuizStatus, Feedback
 import PyPDF2
 import io
 

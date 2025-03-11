@@ -1,16 +1,16 @@
 from fastapi import HTTPException
 import traceback
-from models.videos import VideoModel
-from models.articles import ArticleModel
-from models.assignments import AssignmentModel
-from models.quizzes import QuizModel
-from models.day import DayModel
-from models.certificates import CertificateModel
+from app.models.videos import VideoModel
+from app.models.articles import ArticleModel
+from app.models.assignments import AssignmentModel
+from app.models.quizzes import QuizModel
+from app.models.day import DayModel
+from app.models.certificates import CertificateModel
 from beanie import PydanticObjectId
 import json
-from schemas.content_schema import ContentStatus, QuizStatus
-from core.chat_gpt import chat
-from services.task_service import TaskService
+from app.schemas.content_schema import ContentStatus, QuizStatus
+from app.core.chat_gpt import chat
+from app.services.task_service import TaskService
 
 
 class ContentService:

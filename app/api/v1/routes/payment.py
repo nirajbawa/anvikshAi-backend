@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from schemas.auth_schema import User
-from schemas.payment_schema import InsertOrderSchema
-from services.auth_service import AuthService
+from app.schemas.auth_schema import User
+from app.schemas.payment_schema import InsertOrderSchema
+from app.services.auth_service import AuthService
 from fastapi import status, BackgroundTasks
-from core.security import get_current_active_user
+from app.core.security import get_current_active_user
 from pydantic import BaseModel
-from services.payment_service import PaymentService
+from app.services.payment_service import PaymentService
 
 payment = APIRouter()
 

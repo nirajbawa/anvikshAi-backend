@@ -2,12 +2,12 @@ from fastapi import APIRouter, HTTPException, File, UploadFile
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse, FileResponse
-from schemas.auth_schema import User
+from app.schemas.auth_schema import User
 from fastapi import status
-from core.security import get_current_active_user
-from schemas.tasks_schema import TaskCreate, TaskAccept, UpdateDay, ModifyTask
-from services.task_service import TaskService
-from services.day_n_task_service import DayNTaskSerivce
+from app.core.security import get_current_active_user
+from app.schemas.tasks_schema import TaskCreate, TaskAccept, UpdateDay, ModifyTask
+from app.services.task_service import TaskService
+from app.services.day_n_task_service import DayNTaskSerivce
 import os
 import PyPDF2
 import io

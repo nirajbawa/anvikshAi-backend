@@ -1,10 +1,10 @@
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from dependencies.database import init_db
-from api.v1.routes.user_auth import user_auth
-from api.v1.routes.tasks import task
-from api.v1.routes.content import content
-from api.v1.routes.payment import payment
+from app.dependencies.database import init_db
+from app.api.v1.routes.user_auth import user_auth
+from app.api.v1.routes.tasks import task
+from app.api.v1.routes.content import content
+from app.api.v1.routes.payment import payment
 from fastapi import FastAPI
 from dotenv import load_dotenv
 load_dotenv()
@@ -45,6 +45,6 @@ app.include_router(task, prefix="/task", tags=["Tasks"])
 app.include_router(content, prefix="/content", tags=["Content"])
 app.include_router(payment, prefix="/payment", tags=["Payment"])
 
-# uvicorn app.main:app --reload
+# uvicorn app.main:app
 # fastapi dev app/main.py
  

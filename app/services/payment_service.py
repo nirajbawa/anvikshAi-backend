@@ -3,7 +3,7 @@ import traceback
 import razorpay
 import os
 from beanie import PydanticObjectId
-from models.user import UserModel
+from app.models.user import UserModel
 from datetime import datetime, timezone, timedelta
 
 client = razorpay.Client(

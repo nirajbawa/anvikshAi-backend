@@ -1,10 +1,10 @@
-from models.user import UserModel
-from core.security import hash_password, verify_password, create_jwt_token
+from app.models.user import UserModel
+from app.core.security import hash_password, verify_password, create_jwt_token
 from fastapi_mail import FastMail, MessageSchema
-from core.email import conf
+from app.core.email import conf
 from fastapi.templating import Jinja2Templates
-from schemas.auth_schema import EmailBodySchema, SignUpSchema, Onboarding, Token
-from core.otp_generator import generate_otp
+from app.schemas.auth_schema import EmailBodySchema, SignUpSchema, Onboarding, Token
+from app.core.otp_generator import generate_otp
 from fastapi import HTTPException, BackgroundTasks
 from datetime import datetime, timedelta, timezone
 import os

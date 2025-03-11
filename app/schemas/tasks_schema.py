@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from enum import Enum
-from models.tasks import TaskLanguage
+from app.models.tasks import TaskLanguage
 
 
 class TaskCreate(BaseModel):

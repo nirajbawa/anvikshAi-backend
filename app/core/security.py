@@ -7,10 +7,10 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ValidationError
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from models.user import UserModel
+from app.models.user import UserModel
 from fastapi import HTTPException, status, Depends
 import os
-from schemas.auth_schema import User, TokenData
+from app.schemas.auth_schema import User, TokenData
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/sign-in")

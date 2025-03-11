@@ -2,10 +2,10 @@ from fastapi import APIRouter, HTTPException
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from schemas.auth_schema import SignUpSchema, VerifyOTPSchema, SignInSchema, User, Onboarding
-from services.auth_service import AuthService
+from app.schemas.auth_schema import SignUpSchema, VerifyOTPSchema, SignInSchema, User, Onboarding
+from app.services.auth_service import AuthService
 from fastapi import status, BackgroundTasks
-from core.security import get_current_active_user
+from app.core.security import get_current_active_user
 from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -38,7 +38,6 @@ async def verify(data: VerifyOTPSchema):
 
 @user_auth.post("/sign-in")
 async def verify(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    print(data)
     try:
 
         result = await AuthService.sign_in(data)

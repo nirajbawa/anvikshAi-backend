@@ -1,14 +1,14 @@
 from fastapi import HTTPException
 import traceback
-from core.chat_gpt import chat
+from app.core.chat_gpt import chat
 from beanie import PydanticObjectId
-from models.day import DayModel
-from services.task_service import TaskService
+from app.models.day import DayModel
+from app.services.task_service import TaskService
 import json
-from models.videos import VideoModel
-from models.articles import ArticleModel
-from models.assignments import AssignmentModel
-from models.quizzes import QuizModel
+from app.models.videos import VideoModel
+from app.models.articles import ArticleModel
+from app.models.assignments import AssignmentModel
+from app.models.quizzes import QuizModel
 import yt_dlp
 from googlesearch import search
 
