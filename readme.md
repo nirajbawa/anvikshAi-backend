@@ -36,7 +36,7 @@ Run the FastAPI application using Uvicorn:
 ```sh
 fastapi dev main.py
 OR
-fastapi dev app/main.py
+uvicorn main:app
 ```
 
 ## Verifying the Setup
