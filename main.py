@@ -45,6 +45,3 @@ app.include_router(task, prefix="/task", tags=["Tasks"])
 app.include_router(content, prefix="/content", tags=["Content"])
 app.include_router(payment, prefix="/payment", tags=["Payment"])
 
-# uvicorn app.main:app
-# fastapi dev app/main.py
- 
