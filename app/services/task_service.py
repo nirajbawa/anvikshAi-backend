@@ -374,7 +374,7 @@ class TaskService:
             name=data["name"], course=data["course"], certificate_id=unique_id, instructor="AiNigma",  date=today_date)
 
         # Convert HTML to PDF
-        file_name = f"{data["name"].replace(' ', '_')}_{unique_id}_certificate.pdf"
+        file_name = f"{data['name'].replace(' ', '_')}_{unique_id}_certificate.pdf"
         pdf_path = os.path.join(CERTIFICATES_DIR, file_name)
         HTML(string=html_content).write_pdf(pdf_path)
         return pdf_path
