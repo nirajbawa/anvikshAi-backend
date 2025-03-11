@@ -191,3 +191,20 @@ async def get_feedback(
         print("error : ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@content.get("/certificates")
+async def get_certificates(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    try:
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await ContentService.get_certificates(current_user)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

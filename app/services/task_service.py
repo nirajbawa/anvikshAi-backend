@@ -4,11 +4,19 @@ from beanie import PydanticObjectId
 from fastapi import HTTPException
 import traceback
 from core.chat_gpt import chat
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone, date
 from models.user import PremiumPackage
 import json
 from models.day import DayModel
 import json
+from weasyprint import HTML
+from fastapi.templating import Jinja2Templates
+import os
+import uuid
+from models.certificates import CertificateModel
+
+templates = Jinja2Templates(directory="app/certificate_template")
+CERTIFICATES_DIR = "app/certificate_template"
 
 
 class TaskService:
@@ -58,6 +66,7 @@ class TaskService:
 
             # Validate user_id format
             user_id = PydanticObjectId(current_user.id)
+            print(data)
 
             # Check if subscription is active
             if not await TaskService.is_subscription_active(current_user):
@@ -77,14 +86,17 @@ class TaskService:
             messages = (
                 "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
                 "The user will provide a task description, expected duration (in months), daily study hours, and educational background. "
-                "Generate a step-by-step roadmap with milestones in short not give in details. Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+                "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
+                "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
                 f"Task: {data.description}\n"
-                f"Duration: {data.expected_duration_months} months\n"
+                f"Duration: {data.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
                 f"Daily Hours: {data.daily_hours} hours\n"
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
-                f"Language Preference: {current_user.language_preference}"
+                f"Preferred Language: {current_user.language_preference}\n\n"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
             )
+
             chat_response = chat(messages)
 
             # Create and insert task
@@ -117,6 +129,55 @@ class TaskService:
         return output
 
     @staticmethod
+    async def regenerate_task(current_user: dict, data: str, taskId: str) -> str:
+
+        # Check if subscription is active
+        if not await TaskService.is_subscription_active(current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Your subscription has expired. Please renew to continue creating tasks."
+            )
+
+        can_create, current_tasks, max_tasks = await TaskService.can_create_task(current_user)
+
+        if not can_create:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You've reached your task limit for this month ({current_tasks}/{max_tasks} tasks). Upgrade your plan for more tasks."
+            )
+
+        task = await TaskModel.find_one(
+            {"_id": PydanticObjectId(
+                taskId),  "user": PydanticObjectId(current_user.id)}
+        )
+
+        messages = (
+            "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
+            "The user will provide a task description, expected duration (in months), daily study hours, and educational background. "
+            "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
+            "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+            f"fix this task bsed on this data : {data}"
+            f"Task: {task.description}\n"
+            f"Duration: {task.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
+            f"Daily Hours: {task.daily_hours} hours\n"
+            f"Education Level: {current_user.education}\n"
+            f"Education Stream: {current_user.stream_of_education}\n"
+            f"Preferred Language: {current_user.language_preference}\n\n"
+            "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+            f"previous roadmap ${task.generated_roadmap_text}"
+        )
+
+        chat_response = chat(messages)
+
+        await task.update({
+            "$set": {
+                "generated_roadmap_text": chat_response
+            }
+        })
+
+        return {"message": "Task updated successfully", "task_id": str(task.id), "roadmap": chat_response}
+
+    @staticmethod
     async def accept_task(current_user: dict, data: TaskAccept, task_id: str) -> dict:
         try:
 
@@ -132,22 +193,29 @@ class TaskService:
 
             messages = (
                 f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
-                f"Divide the topics over {is_task_exists.expected_duration_months * 30} days, considering {is_task_exists.daily_hours} hours of study per day. "
+                f"Divide the topics over {is_task_exists.expected_duration_months * 30} (if expected_duration_months is 0, use the user's education level to decide the timeline) days, considering {is_task_exists.daily_hours} hours of study per day. "
                 "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
-                "strictly Return the output in JSON format with fields: 'day', 'topics'. (make sure output is under the token limit)"
+                f"Daily Hours: {is_task_exists.daily_hours} hours\n"
+                f"Education Level: {current_user.education}\n"
+                f"Education Stream: {current_user.stream_of_education}\n"
+                f"Preferred Language: {current_user.language_preference}\n\n"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+                "strictly Return the output only in JSON format with fields: 'day', 'topics', 'keyword' (give base keyword of the main topic to search) (in topic only mention the topic no hours or else) (dont add any extra parameter rather than day or topics in array). (make sure output is under the token limit)"
             )
 
             chat_response = chat(messages)
             cleaned_output = TaskService.clean_json_output(chat_response)
             day_wise_task = json.loads(cleaned_output)
+            print(day_wise_task)
 
             day_entries = [
                 DayModel(
                     day=day_data["day"],
-                    topics=day_data["topics"],
+                    topics=day_data["topics"][0],
                     status=False,
                     belongs_to=PydanticObjectId(task_id),
-                    user=PydanticObjectId(current_user.id)
+                    user=PydanticObjectId(current_user.id),
+                    keyword=day_data["keyword"]
                 )
                 for day_data in day_wise_task
             ]
@@ -253,6 +321,34 @@ class TaskService:
                     taskId),  "user": PydanticObjectId(current_user.id)}
             ).count()
 
+            if total_days == completed_days:
+
+                task = await TaskModel.find_one({
+                    "_id": PydanticObjectId(taskId)
+                })
+
+                pdf_path = TaskService.generate_certificate({
+                    "name": current_user.first_name + " " + current_user.last_name,
+                    "course": task.task_name,
+                })
+
+                print(pdf_path)
+
+                certificate = CertificateModel(
+                    task_id=PydanticObjectId(taskId),
+                    user=PydanticObjectId(current_user.id),
+                    task_name=task.task_name,
+                    link=pdf_path
+                )
+
+                await certificate.insert()
+
+                await task.update({
+                    "$set": {
+                        "completed": True
+                    }
+                })
+
             data = {
                 "completed_days": completed_days,
                 "total_days": total_days
@@ -265,3 +361,20 @@ class TaskService:
             print(f"Error: {traceback.format_exc()}")
             raise HTTPException(
                 status_code=500, detail=str(e))
+
+    @staticmethod
+    def generate_certificate(data: dict):
+        # Fill in the template with user data
+        today_date = date.today().strftime("%B %d, %Y")
+        template = templates.get_template(
+            "certificate.html")
+        unique_id = str(uuid.uuid4())[:8]  # Shorten the UUID for readability
+
+        html_content = template.render(
+            name=data["name"], course=data["course"], certificate_id=unique_id, instructor="AiNigma",  date=today_date)
+
+        # Convert HTML to PDF
+        file_name = f"{data["name"].replace(' ', '_')}_{unique_id}_certificate.pdf"
+        pdf_path = os.path.join(CERTIFICATES_DIR, file_name)
+        HTML(string=html_content).write_pdf(pdf_path)
+        return pdf_path

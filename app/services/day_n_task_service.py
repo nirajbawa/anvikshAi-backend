@@ -1,9 +1,8 @@
 from fastapi import HTTPException
 import traceback
-from core.chat_gpt import chat, chat_gpt
+from core.chat_gpt import chat
 from beanie import PydanticObjectId
 from models.day import DayModel
-from core.chat_gpt import chat
 from services.task_service import TaskService
 import json
 from models.videos import VideoModel
@@ -11,6 +10,7 @@ from models.articles import ArticleModel
 from models.assignments import AssignmentModel
 from models.quizzes import QuizModel
 import yt_dlp
+from googlesearch import search
 
 
 class DayNTaskSerivce:
@@ -30,15 +30,12 @@ class DayNTaskSerivce:
                     detail=f"Invalid day id"
                 )
 
-            day_description_and_tasks = await DayNTaskSerivce.create_task_description(is_day_exists.topics)
-            # video_content = await DayNTaskSerivce.create_video_list(str(day_description_and_tasks["topics"]))
+            day_description_and_tasks = await DayNTaskSerivce.create_task_description(is_day_exists.topics, is_day_exists.keyword)
             video_content = DayNTaskSerivce.search_videos_from_topics(
-                day_description_and_tasks["topics"])
-            # print(video_content)
-            # print(video_content)
-            article_content = await DayNTaskSerivce.create_article_list(str(day_description_and_tasks["topics"]))
-            assignment_content = await DayNTaskSerivce.create_assignment(str(day_description_and_tasks["topics"]))
-            quiz_content = await DayNTaskSerivce.create_quiz(str(day_description_and_tasks["topics"]))
+                day_description_and_tasks["topics"], is_day_exists.keyword)
+            article_content = await DayNTaskSerivce.list_articles(day_description_and_tasks["topics"], is_day_exists.keyword)
+            assignment_content = await DayNTaskSerivce.create_assignment(str(day_description_and_tasks["topics"]), is_day_exists.keyword)
+            quiz_content = await DayNTaskSerivce.create_quiz(str(day_description_and_tasks["topics"]), is_day_exists.keyword)
 
             video = VideoModel(
                 videos_list=video_content,
@@ -93,46 +90,21 @@ class DayNTaskSerivce:
                 status_code=500, detail=str(e))
 
     @staticmethod
-    async def create_task_description(topics: str) -> dict:
+    async def create_task_description(topics: str, keyword: str) -> dict:
         try:
             messages = (
-                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. "
+                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. keyword: {keyword}"
                 f"Based on the topics, generate a short and precise description of the day and list only the relevant subtopics covered. "
                 f"Do not include any unnecessary or irrelevant topics. strictly Return the output in valid JSON format like this: "
                 '{"description": "", "topics": []}'
             )
 
             chat_response = chat(messages)
+            print("response ", chat_response)
             cleaned_output = TaskService.clean_json_output(chat_response)
             data = json.loads(cleaned_output)
 
             # print(data)
-            return data
-        except Exception as e:
-            # Logs the full error traceback
-            print(f"Error: {traceback.format_exc()}")
-            raise HTTPException(
-                status_code=500, detail=str(e))
-
-    @staticmethod
-    async def create_video_list(topics: str) -> dict:
-        try:
-
-            messages = (
-                f"You are a video curation agent. Analyze the given topics: {topics}, and search YouTube for the best educational videos. "
-                f"Prioritize videos with high likes, views, and positive engagement. Ensure each video is: "
-                f"1. Publicly available (not private, restricted, or removed). "
-                f"2. Accessible with a valid, working URL. "
-                f"If no exact match is found, return a high-quality related video. "
-                f"Output strictly in pure JSON format: "
-                f'[{{"topic": "Topic Name", "link": "https://youtube.com/watch?v=VIDEO_ID"}}]'
-            )
-
-            chat_response = chat(messages)
-            cleaned_output = TaskService.clean_json_output(chat_response)
-            data = json.loads(cleaned_output)
-
-            # print(chat_response)
             return data
         except Exception as e:
             # Logs the full error traceback
@@ -164,7 +136,7 @@ class DayNTaskSerivce:
                 status_code=500, detail=str(e))
 
     @staticmethod
-    def search_videos_from_topics(topics):
+    def search_videos_from_topics(topics, keyword):
         ydl_opts = {
             "quiet": True,
             "extract_flat": True,
@@ -174,7 +146,8 @@ class DayNTaskSerivce:
         results = []
 
         for topic in topics:
-            search_url = f"ytsearch1:{topic}"  # Search for the top 1 video
+            # Search for the top 1 video
+            search_url = f"ytsearch1:{topic} in ({keyword})"
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(search_url, download=False)
@@ -189,10 +162,37 @@ class DayNTaskSerivce:
         return results
 
     @staticmethod
-    async def create_assignment(topics: str) -> dict:
+    async def list_articles(topics, keyword):
+        unique_links = set()
+        results = []
+
+        print("hello 2")
+
+        for topic in topics:
+            query = topic + " in " + keyword
+            try:
+                found = False
+                # Set num_results to 1 per topic
+                for result in search(query, num_results=1):
+                    if result not in unique_links:
+                        unique_links.add(result)
+                        results.append({"topic": topic, "link": result})
+                        found = True
+                        break  # Only take the first valid link
+
+                if not found:
+                    print(
+                        f"No articles found for topic '{topic}'. Skipping...")
+            except:
+                print(f"Skipping topic '{topic}' due to an unexpected issue.")
+
+        return results
+
+    @staticmethod
+    async def create_assignment(topics: str, keyword) -> dict:
         try:
             messages = (
-                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. "
+                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. keyword: {keyword}"
                 f"Based on the topics, generate a single written assignment question. "
                 f"Ensure the question is purely text-based and doesn't request the user to include any images. "
                 f"strictly Return the output in JSON format like this: "
@@ -211,10 +211,10 @@ class DayNTaskSerivce:
                 status_code=500, detail=str(e))
 
     @staticmethod
-    async def create_quiz(topics: str) -> dict:
+    async def create_quiz(topics: str, keyword: str) -> dict:
         try:
             messages = (
-                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. "
+                f"You are a roadmap generator agent. Your task is to analyze the given day's topics: {topics}. keyword: {keyword}"
                 f"strictly Based on the topics, generate a quiz with exactly 10 questions. Return the output in a valid JSON array format like this: "
                 '[{"id": 1, "question": "Your question here", "options": {"a": "Option A", "b": "Option B", "c": "Option C", "d": "Option D"}, "answer": "a"}]'
             )

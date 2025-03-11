@@ -17,7 +17,7 @@ class TaskLanguage(str, Enum):
 
 class DayTaskSchema(BaseModel):
     day: int = Field(gt=0, description="Day number (should be positive)")
-    topics: str = Field(min_length=3, max_length=500)
+    topics: str = Field(min_length=3)
     status: bool = Field(default=False, description="Completion status")
 
 # Task Model
@@ -26,9 +26,8 @@ class DayTaskSchema(BaseModel):
 class TaskModel(Document):
     task_name: str = Field(min_length=3, max_length=100)
     description: str = Field(None, min_length=10, max_length=2000)
-    expected_duration_months: int = Field(
-        gt=0, description="Duration in months")
-    daily_hours: float = Field(gt=0, le=24, description="Hours spent daily")
+    expected_duration_months: int = Field(description="Duration in months")
+    daily_hours: float = Field(description="Hours spent daily")
     language: TaskLanguage
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))

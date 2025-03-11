@@ -5,6 +5,7 @@ from models.articles import ArticleModel
 from models.assignments import AssignmentModel
 from models.quizzes import QuizModel
 from models.day import DayModel
+from models.certificates import CertificateModel
 from beanie import PydanticObjectId
 import json
 from schemas.content_schema import ContentStatus, QuizStatus
@@ -406,7 +407,7 @@ class ContentService:
                 f"Name of task: {str(task_name)} "
                 f"Status of task: {str(task_status)} "
                 f"Score of task: {str(task_score)} "
-                f"Strictly Return the output in pure JSON format, like this: {{\"feedback\": \"Your feedback here\"}}"
+                f"Strictly Return the output in pure JSON format, like this: {{\"feedback\": \"Your feedback here (only str)\"}}"
             )
 
             chat_response = chat(messages)
@@ -419,3 +420,25 @@ class ContentService:
             print(f"Error: {traceback.format_exc()}")
             raise HTTPException(
                 status_code=500, detail="Internal Server Error")
+
+    @staticmethod
+    async def get_certificates(current_user: dict) -> dict:
+        try:
+            is_task_exists = await CertificateModel.find(
+                {"user": PydanticObjectId(current_user.id)}
+            ).to_list()
+
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No task exists"
+                )
+
+            data = [json.loads(task.model_dump_json())
+                    for task in is_task_exists]
+            return {"message": "Certificates fetched successfully", "data": data}
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail=str(e))

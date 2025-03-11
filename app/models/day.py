@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 class DayModel(Document):
     day: int = Field(gt=0, description="Day number (should be positive)")
-    topics: str = Field(min_length=3, max_length=500)
+    topics: str = Field(min_length=3)
     status: bool = Field(default=False, description="Completion status")
     belongs_to: PydanticObjectId = None
     leaning_topics: Optional[List] = Field(
@@ -22,6 +22,7 @@ class DayModel(Document):
     quiz: Optional[PydanticObjectId] = None
     assignment: Optional[PydanticObjectId] = None
     article: Optional[PydanticObjectId] = None
+    keyword: Optional[str] = None
 
     class Settings:
         collection = "days"
