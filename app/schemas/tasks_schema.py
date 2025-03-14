@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
-from datetime import datetime
-from enum import Enum
+from typing import List
 from app.models.tasks import TaskLanguage
 
 
@@ -30,3 +28,7 @@ class UpdateDay(BaseModel):
 class ModifyTask(BaseModel):
     text: str = Field(...,
                       description="Indicates the text")
+
+class CreateRoadmap(BaseModel):
+    questions: List = Field(...,
+                          description="Indicates the question")

@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, File, UploadFile
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse, FileResponse
 from app.schemas.auth_schema import User
 from fastapi import status
 from app.core.security import get_current_active_user
-from app.schemas.tasks_schema import TaskCreate, TaskAccept, UpdateDay, ModifyTask
+from app.schemas.tasks_schema import TaskCreate, CreateRoadmap, UpdateDay, ModifyTask
 from app.services.task_service import TaskService
 from app.services.day_n_task_service import DayNTaskSerivce
 import os
@@ -34,20 +34,38 @@ async def create_task(
         print("error : ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
-@task.post("/accept-task/{task_id}")
-async def accept_task(
+        
+        
+@task.post("/create-roadmap/{task_id}")
+async def create_roadmap(
     current_user: Annotated[User, Depends(get_current_active_user)],
     task_id: str,
-    data: TaskAccept
+    data: CreateRoadmap
+):
+    try:
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await TaskService.create_roadmap(current_user, task_id, data)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@task.post("/create-course/{task_id}")
+async def create_course(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    task_id: str,
 ):
     try:
         if (current_user.onboarding == False):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 detail="Please complete onboarding first")
 
-        result = await TaskService.accept_task(current_user, data, task_id)
+        result = await TaskService.create_course(current_user, task_id)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
@@ -56,8 +74,8 @@ async def accept_task(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@task.post("/accept-task-modify/{task_id}")
-async def modify_task(
+@task.post("/accept-roadmap-modify/{task_id}")
+async def modify_roadmap(
     current_user: Annotated[User, Depends(get_current_active_user)],
     task_id: str,
     data: ModifyTask
@@ -67,7 +85,7 @@ async def modify_task(
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                                 detail="Please complete onboarding first")
 
-        result = await TaskService.regenerate_task(current_user, data.text, task_id)
+        result = await TaskService.regenerate_roadmap(current_user, data.text, task_id)
         return JSONResponse(status_code=status.HTTP_200_OK, content=result)
 
     except Exception as e:
@@ -234,10 +252,6 @@ async def pdf_reader(
     file: UploadFile = File(...),
 ):
     try:
-        if (current_user.onboarding == False):
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail="Please complete onboarding first")
-
         contents = await file.read()
         pdf_reader = PyPDF2.PdfReader(io.BytesIO(contents))
 

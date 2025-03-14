@@ -1,4 +1,4 @@
-from app.schemas.tasks_schema import TaskCreate, TaskAccept
+from app.schemas.tasks_schema import TaskCreate, CreateRoadmap
 from app.models.tasks import TaskModel
 from beanie import PydanticObjectId
 from fastapi import HTTPException
@@ -14,12 +14,14 @@ from fastapi.templating import Jinja2Templates
 import os
 import uuid
 from app.models.certificates import CertificateModel
+from typing import List
 
 templates = Jinja2Templates(directory="app/certificate_template")
 CERTIFICATES_DIR = "app/certificate_template"
 
 
 class TaskService:
+
     @staticmethod
     async def is_subscription_active(user: dict) -> bool:
         try:
@@ -66,7 +68,6 @@ class TaskService:
 
             # Validate user_id format
             user_id = PydanticObjectId(current_user.id)
-            print(data)
 
             # Check if subscription is active
             if not await TaskService.is_subscription_active(current_user):
@@ -86,18 +87,26 @@ class TaskService:
             messages = (
                 "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
                 "The user will provide a task description, expected duration (in months), daily study hours, and educational background. "
-                "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
-                "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+                "Generate a questionnaire based on the user's task description to help create a step-by-step learning roadmap. "
+                "Tailor the roadmap based on the user's educational level, stream, and preferred language to optimize their learning path.\n\n"
                 f"Task: {data.description}\n"
                 f"Duration: {data.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
                 f"Daily Hours: {data.daily_hours} hours\n"
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
-                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+                f"user bio : {current_user.bio}"
+                "Return the questionnaire output in the following format:\n"
+                "[{'id': 'unique_id', 'question': 'Your question text', 'options': {'a': 'Option A', 'b': 'Option B', 'c': 'Option C', 'd': 'Option D'}, answer:none}]\n"
+                "Ensure the questions are relevant to the task and designed to gather insights that improve the roadmap quality."
             )
 
             chat_response = chat(messages)
+
+            cleaned_output = TaskService.clean_json_output(chat_response)
+            questionier = json.loads(cleaned_output)
+
+            print(questionier)
 
             # Create and insert task
             task = TaskModel(
@@ -107,11 +116,70 @@ class TaskService:
                 daily_hours=data.daily_hours,
                 language=data.language,
                 user=user_id,
-                generated_roadmap_text=chat_response
+                questionnaire=questionier
             )
 
             await task.insert()
-            return {"message": "Task created successfully", "task_id": str(task.id), "roadmap": chat_response}
+            return {"message": "Task created successfully", "task_id": str(task.id), "questionnaire": questionier}
+
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail=str(e))
+
+    @staticmethod
+    async def create_roadmap(current_user: dict, task_id: str, data: CreateRoadmap) -> dict:
+        try:
+
+            task = await TaskModel.find_one(
+                {"_id": PydanticObjectId(
+                    task_id), "user": PydanticObjectId(current_user.id)}
+            )
+
+            if (not task):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Invalid task id"
+                )
+
+            messages = (
+                "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
+                "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description."
+                "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
+                "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+                f"Task: {task.description}\n"
+                f"Duration: {task.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
+                f"Daily Hours: {task.daily_hours} hours\n"
+                f"Education Level: {current_user.education}\n"
+                f"Education Stream: {current_user.stream_of_education}\n"
+                f"Preferred Language: {current_user.language_preference}\n\n",
+                f"questionnaire : {str(data.questions)}"
+                f"user bio : {current_user.bio}"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+            )
+
+            chat_response = chat(messages)
+
+            # Create and insert task
+            # task = TaskModel(
+            #     task_name=task.task_name,
+            #     description=task.description,
+            #     expected_duration_months=task.expected_duration_months,
+            #     daily_hours=task.daily_hours,
+            #     language=task.language,
+            #     user=PydanticObjectId(current_user.id),
+            #     questionnaire=questionier
+            # )
+
+            await task.update({
+                "$set": {
+                    "generated_roadmap_text": chat_response,
+                    "questionnaire": data.questions
+                }
+            })
+
+            return {"message": "Roadmap created successfully", "task_id": str(task.id), "roadmap": chat_response}
 
         except Exception as e:
             # Logs the full error traceback
@@ -129,7 +197,7 @@ class TaskService:
         return output
 
     @staticmethod
-    async def regenerate_task(current_user: dict, data: str, taskId: str) -> str:
+    async def regenerate_roadmap(current_user: dict, data: str, taskId: str) -> str:
 
         # Check if subscription is active
         if not await TaskService.is_subscription_active(current_user):
@@ -148,12 +216,18 @@ class TaskService:
 
         task = await TaskModel.find_one(
             {"_id": PydanticObjectId(
-                taskId),  "user": PydanticObjectId(current_user.id)}
+                taskId), "user": PydanticObjectId(current_user.id)}
         )
+
+        if (not task):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Invalid task id"
+            )
 
         messages = (
             "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
-            "The user will provide a task description, expected duration (in months), daily study hours, and educational background. "
+            "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description. "
             "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
             "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
             f"fix this task bsed on this data : {data}"
@@ -163,6 +237,8 @@ class TaskService:
             f"Education Level: {current_user.education}\n"
             f"Education Stream: {current_user.stream_of_education}\n"
             f"Preferred Language: {current_user.language_preference}\n\n"
+            f"user bio : {current_user.bio}"
+            f"questionnaire : {str(task.questionnaire)}"
             "At the end of the roadmap, provide future courses and learning suggestions on the last day."
             f"previous roadmap ${task.generated_roadmap_text}"
         )
@@ -175,10 +251,10 @@ class TaskService:
             }
         })
 
-        return {"message": "Task updated successfully", "task_id": str(task.id), "roadmap": chat_response}
+        return {"message": "Raodmap updated successfully", "task_id": str(task.id), "roadmap": chat_response}
 
     @staticmethod
-    async def accept_task(current_user: dict, data: TaskAccept, task_id: str) -> dict:
+    async def create_course(current_user: dict, task_id: str) -> dict:
         try:
 
             is_task_exists = await TaskModel.find_one(
@@ -199,6 +275,7 @@ class TaskService:
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
+                f"user bio : {current_user.bio}"
                 "At the end of the roadmap, provide future courses and learning suggestions on the last day."
                 "strictly Return the output only in JSON format with fields: 'day', 'topics', 'keyword' (give base keyword of the main topic to search) (in topic only mention the topic no hours or else) (dont add any extra parameter rather than day or topics in array). (make sure output is under the token limit)"
             )
@@ -239,7 +316,7 @@ class TaskService:
                 }
             })
 
-            return {"message": "Task created successfully"}
+            return {"message": "Course created successfully"}
 
         except Exception as e:
             # Logs the full error traceback
@@ -318,7 +395,7 @@ class TaskService:
 
             total_days = await DayModel.find_one(
                 {"belongs_to": PydanticObjectId(
-                    taskId),  "user": PydanticObjectId(current_user.id)}
+                    taskId), "user": PydanticObjectId(current_user.id)}
             ).count()
 
             if total_days == completed_days:
@@ -371,7 +448,7 @@ class TaskService:
         unique_id = str(uuid.uuid4())[:8]  # Shorten the UUID for readability
 
         html_content = template.render(
-            name=data["name"], course=data["course"], certificate_id=unique_id, instructor="AiNigma",  date=today_date)
+            name=data["name"], course=data["course"], certificate_id=unique_id, instructor="AiNigma", date=today_date)
 
         # Convert HTML to PDF
         file_name = f"{data['name'].replace(' ', '_')}_{unique_id}_certificate.pdf"

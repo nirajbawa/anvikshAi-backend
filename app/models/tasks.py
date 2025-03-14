@@ -37,6 +37,7 @@ class TaskModel(Document):
     user: Optional[PydanticObjectId] = None
     generated_roadmap_text: Optional[str] = None
     accepted: Optional[bool] = False
+    questionnaire: Optional[List] = Field(default=[], description="List of questions")
     roadmap_phases: Optional[List] = Field(
         default=[], description="List of roadmap phases")
 

@@ -32,7 +32,7 @@ class UserModel(Document):
     last_name: Optional[str] = Field(min_length=3, default=None)
     dob: Optional[datetime] = None  # ✅ Now Optional
     bio: Optional[str] = Field(
-        min_length=0, max_length=1000, default=None)  # ✅ Allows empty bio
+        min_length=0, max_length=90000, default=None)  # ✅ Allows empty bio
     education: Optional[EducationLevel] = None  # ✅ Now Optional
     stream_of_education: Optional[str] = None  # ✅ Default Empty String
     language_preference: Optional[LanguagePreference] = None  # ✅ Now Optional
