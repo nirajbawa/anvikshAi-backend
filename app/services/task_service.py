@@ -96,8 +96,8 @@ class TaskService:
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
                 f"user bio : {current_user.bio}"
-                "Return the questionnaire output in the following format:\n"
-                "[{'id': 'unique_id', 'question': 'Your question text', 'options': {'a': 'Option A', 'b': 'Option B', 'c': 'Option C', 'd': 'Option D'}, answer:none}]\n"
+                "Strictly Return the questionnaire and keywords releted to roadmap primary domain(s) (ex: software engineering) and taks_name_gen output in the following format:\n"
+                "{'questions':[{'id': 'unique_id', 'question': 'Your question text', 'options': {'a': 'Option A', 'b': 'Option B', 'c': 'Option C', 'd': 'Option D'}, answer:none}], 'domains':[], 'task_name_gen':''}\n"
                 "Ensure the questions are relevant to the task and designed to gather insights that improve the roadmap quality."
             )
 
@@ -106,7 +106,8 @@ class TaskService:
             cleaned_output = TaskService.clean_json_output(chat_response)
             questionier = json.loads(cleaned_output)
 
-            print(questionier)
+            print(chat_response)
+            domains = list(map(str.lower, questionier["domains"]))
 
             # Create and insert task
             task = TaskModel(
@@ -116,11 +117,13 @@ class TaskService:
                 daily_hours=data.daily_hours,
                 language=data.language,
                 user=user_id,
-                questionnaire=questionier
+                questionnaire=questionier["questions"],
+                domains=domains,
+                task_name_gen=questionier["task_name_gen"]
             )
 
             await task.insert()
-            return {"message": "Task created successfully", "task_id": str(task.id), "questionnaire": questionier}
+            return {"message": "Task created successfully", "task_id": str(task.id), "questionnaire": questionier["questions"]}
 
         except Exception as e:
             # Logs the full error traceback

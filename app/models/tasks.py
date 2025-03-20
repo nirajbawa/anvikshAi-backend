@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from pydantic import Field, BaseModel
 from beanie import Document, Link, PydanticObjectId
 from enum import Enum
-from app.models.user import UserModel
 
 # Task Language Enum
 
@@ -37,9 +36,16 @@ class TaskModel(Document):
     user: Optional[PydanticObjectId] = None
     generated_roadmap_text: Optional[str] = None
     accepted: Optional[bool] = False
-    questionnaire: Optional[List] = Field(default=[], description="List of questions")
+    questionnaire: Optional[List] = Field(
+        default=[], description="List of questions")
     roadmap_phases: Optional[List] = Field(
         default=[], description="List of roadmap phases")
+    domains: Optional[List] = Field(
+        default=[], description="List of domains")
+    task_name_gen: Optional[str] = None
+    feedback: Optional[str] = None
+    rating: Optional[float] = Field(default=0)
+    reviewer: Optional[PydanticObjectId] = None
 
     class Settings:
         json_encoders = {PydanticObjectId: str}

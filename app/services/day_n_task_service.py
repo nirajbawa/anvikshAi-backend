@@ -9,7 +9,7 @@ from app.models.videos import VideoModel
 from app.models.articles import ArticleModel
 from app.models.assignments import AssignmentModel
 from app.models.quizzes import QuizModel
-import yt_dlp
+from yt_dlp import YoutubeDL
 from googlesearch import search
 
 
@@ -149,15 +149,19 @@ class DayNTaskSerivce:
             # Search for the top 1 video
             search_url = f"ytsearch1:{topic} in ({keyword})"
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(search_url, download=False)
 
-            if 'entries' in info and info['entries']:
+            # Ensure valid data is found
+            if info and 'entries' in info and info['entries']:
                 entry = info['entries'][0]
-                results.append({
-                    "topic": topic,
-                    "link": entry['url']
-                })
+
+                # Skip if entry is empty or has no valid URL
+                if entry and 'url' in entry and entry['url']:
+                    results.append({
+                        "topic": topic,
+                        "link": entry['url']
+                    })
 
         return results
 

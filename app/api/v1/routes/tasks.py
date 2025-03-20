@@ -248,7 +248,6 @@ async def download_certificate(current_user: Annotated[User, Depends(get_current
 
 @task.post("/readpdf")
 async def pdf_reader(
-    current_user: Annotated[User, Depends(get_current_active_user)],
     file: UploadFile = File(...),
 ):
     try:

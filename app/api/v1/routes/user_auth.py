@@ -6,7 +6,6 @@ from app.schemas.auth_schema import SignUpSchema, VerifyOTPSchema, SignInSchema,
 from app.services.auth_service import AuthService
 from fastapi import status, BackgroundTasks
 from app.core.security import get_current_active_user
-from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordRequestForm
 
 user_auth = APIRouter()
@@ -37,7 +36,7 @@ async def verify(data: VerifyOTPSchema):
 
 
 @user_auth.post("/sign-in")
-async def verify(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+async def sign_in(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     try:
 
         result = await AuthService.sign_in(data)

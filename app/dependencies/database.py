@@ -8,6 +8,8 @@ from app.models.articles import ArticleModel
 from app.models.assignments import AssignmentModel
 from app.models.quizzes import QuizModel
 from app.models.certificates import CertificateModel
+from app.models.admin import AdminModel
+from app.models.expert import ExpertModel
 import os
 from dotenv import load_dotenv
 
@@ -19,4 +21,4 @@ MONGO_URI = os.getenv("DATABASE_URI")
 async def init_db():
     client = AsyncIOMotorClient(MONGO_URI)
     db = client.fastapi_db  # Database name
-    await init_beanie(database=db, document_models=[UserModel, TaskModel, DayModel, VideoModel, ArticleModel, AssignmentModel, QuizModel, CertificateModel])
+    await init_beanie(database=db, document_models=[UserModel, TaskModel, DayModel, VideoModel, ArticleModel, AssignmentModel, QuizModel, CertificateModel, AdminModel, ExpertModel])

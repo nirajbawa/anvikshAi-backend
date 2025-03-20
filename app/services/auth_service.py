@@ -48,6 +48,7 @@ class AuthService:
             return "Please verify your email. Check your inbox for the verification code."
 
         except Exception as e:
+            print(e)
             raise HTTPException(status_code=500, detail=str(e))
 
     @staticmethod
@@ -88,7 +89,8 @@ class AuthService:
     async def sign_in(data) -> dict:
         user = await UserModel.find_one({"email": data.username, "verified": True})
         if not user:
-            raise HTTPException(status_code=400, detail="Invalid email.")
+            raise HTTPException(
+                status_code=400, detail="Invalid email or password.")
         if not verify_password(data.password, user.password):
             raise HTTPException(
                 status_code=400, detail="Invalid email or password.")
