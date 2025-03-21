@@ -76,7 +76,7 @@ class AdminExpertService:
     @staticmethod
     async def send_email(recipient: str, subject: str, body: ExpertEmailSchema) -> None:
         template_data = {
-            "invitation_url": f"{os.getenv("FRONT_END_URL")}/expert-onboarding/{body.token}"}
+            "invitation_url": f"{os.getenv('FRONT_END_URL')}/expert-onboarding/{body.token}"}
         html_content = templates.get_template(
             "expert_email.html").render(template_data)
 

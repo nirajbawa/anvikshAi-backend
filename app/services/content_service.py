@@ -320,7 +320,8 @@ class ContentService:
                 f"question : {is_assign_exists.assinments_question}"
                 f"submition: {assignment}"
                 f"Assign marks out of 10 based on the quality and completeness of the answer. "
-                f"Strictly return the output in pure JSON format, like this: {{\"marks\": int}}"
+                f"Strictly return the output in pure JSON format, like this: {{\"marks\": int}}",
+                f"Strictly don't return any other text."
             )
 
             chat_response = chat(messages)
