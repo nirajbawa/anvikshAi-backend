@@ -7,6 +7,7 @@ from pydantic import EmailStr, Field
 from datetime import datetime
 from pydantic import BaseModel
 from beanie import PydanticObjectId
+from app.models.expert import ExpertModel
 
 
 class UserProjection(BaseModel):
@@ -58,6 +59,24 @@ class AdminUsersService:
                 "current_page": page,
                 "users": data
             }
+
+        except Exception as e:
+            print(e)
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @staticmethod
+    async def get_stats() -> dict:
+        try:
+            total_users = await UserModel.find().count()
+            total_experts = await ExpertModel.find().count()
+            total_mentors = await ExpertModel.find().count()
+
+            return {"message": "Data fetched successfully...!",
+                    "data": {
+                        "total_users": total_users,
+                        "total_experts": total_experts,
+                        "total_mentors": total_mentors
+                    }}
 
         except Exception as e:
             print(e)

@@ -20,3 +20,15 @@ async def get_students(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@admin_users.get("/dashboard-stats")
+async def get_students(
+    current_user: Annotated[Admin, Depends(get_current_active_admin)],
+):
+    try:
+        result = await AdminUsersService.get_stats()
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
