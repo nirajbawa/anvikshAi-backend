@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import JSONResponse
-from app.services.expert_courses import ExpertCoursesSerivce
+from app.services.expert_courses_service import ExpertCoursesSerivce
 from app.schemas.auth_schema import Expert
 from app.schemas.expert_schema import ExpertCourseReviewSchema
 from fastapi import BackgroundTasks

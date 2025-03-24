@@ -50,6 +50,12 @@ class Expert(BaseModel):
     verified: bool | None = None
 
 
+class Mentor(BaseModel):
+    email: str | None = None
+    role: str | None = None
+    verified: bool | None = None
+
+
 class Onboarding(BaseModel):
     first_name: str = Field(min_length=3)
     last_name: str = Field(min_length=3)

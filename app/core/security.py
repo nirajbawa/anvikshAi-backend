@@ -10,9 +10,10 @@ from typing import Annotated
 from app.models.user import UserModel
 from fastapi import HTTPException, status, Depends, Header
 import os
-from app.schemas.auth_schema import User, TokenData, Admin, Expert
+from app.schemas.auth_schema import User, TokenData, Admin, Expert, Mentor
 from app.models.admin import AdminModel
 from app.models.expert import ExpertModel
+from app.models.mentor import MentorModel
 from typing import Optional, List
 from pydantic import EmailStr, Field
 from beanie import PydanticObjectId
@@ -63,6 +64,20 @@ class ExpertProjection(BaseModel):
     domains: Optional[List[str]]
     review_points: Optional[float]
 
+
+class MentorProjection(BaseModel):
+    id: Optional[PydanticObjectId] = Field(alias="_id")
+    email: Optional[EmailStr]
+    first_name: Optional[str]
+    last_name: Optional[str]
+    bio: Optional[str]
+    education: Optional[str]
+    stream_of_education: Optional[str]
+    resume: Optional[str]
+    created_at: Optional[datetime]
+    verified: Optional[bool]
+    onboarding: Optional[bool]
+    domains: Optional[List[str]]
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -184,6 +199,47 @@ async def get_current_expert(authorization: str = Header(None)):
 
 async def get_current_active_expert(
     current_user: Annotated[Expert, Depends(get_current_expert)],
+):
+    if not current_user.verified:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user
+
+
+async def get_current_mentor(authorization: str = Header(None)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        if authorization is None or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing or invalid Authorization header",
+            )
+
+        # Extract the token after "Bearer "
+        token = authorization.split(" ")[1]
+        payload = jwt.decode(token, os.getenv(
+            "MENTOR_SECRET_KEY"), algorithms=[ALGORITHM])
+
+        email: str = payload.get("sub")
+        role: str = payload.get("role")
+        if email is None or role != "mentor":
+            raise credentials_exception
+
+        token_data = TokenData(email=email, role=role)
+    except InvalidTokenError:
+        raise credentials_exception
+    user = await MentorModel.find_one({"email": token_data.email}).project(MentorProjection)
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+async def get_current_active_mentor(
+    current_user: Annotated[Mentor, Depends(get_current_mentor)],
 ):
     if not current_user.verified:
         raise HTTPException(status_code=400, detail="Inactive user")
