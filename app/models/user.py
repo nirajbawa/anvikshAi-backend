@@ -46,6 +46,6 @@ class UserModel(Document):
         default=PremiumPackage.BASIC)  # ✅ Fixed Enum Default
     validTill: Optional[datetime] = None
     razorpay_order_id: Optional[str] = Field(default=None)
-    
+
     class Settings:
         collection = "users"

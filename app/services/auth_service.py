@@ -81,7 +81,10 @@ class AuthService:
             user.verified = True
             await user.save()
 
-            return "Email verified successfully!"
+            token = create_jwt_token({"sub": user.email}, os.getenv(
+                "SECRET_KEY"), timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+
+            return Token(access_token=token, token_type="bearer").dict()
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 

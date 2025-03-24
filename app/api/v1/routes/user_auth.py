@@ -30,7 +30,7 @@ async def verify(data: VerifyOTPSchema):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="User already exists")
     try:
         result = await AuthService.verify_otp(data.email, data.otp)
-        return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": result,  "status": True})
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 

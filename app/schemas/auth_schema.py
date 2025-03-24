@@ -54,7 +54,7 @@ class Onboarding(BaseModel):
     first_name: str = Field(min_length=3)
     last_name: str = Field(min_length=3)
     dob: datetime
-    bio: str = Field(min_length=300, max_length=90000)
+    bio: str = Field(min_length=50, max_length=90000)
     education: EducationLevel
     stream_of_education: str = Field(min_length=5)
     language_preference: LanguagePreference
@@ -73,7 +73,7 @@ class ExpertOnboardingSchema(BaseModel):
     password: str = Field(min_length=6)
     first_name: str = Field(min_length=3)
     last_name: str = Field(min_length=3)
-    bio: str = Field(min_length=300, max_length=90000)
+    bio: str = Field(min_length=50, max_length=90000)
     education: EducationLevel
     stream_of_education: str = Field(min_length=5)
     resume: str = Field(min_length=5)
