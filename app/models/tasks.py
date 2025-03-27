@@ -46,6 +46,7 @@ class TaskModel(Document):
     feedback: Optional[str] = None
     rating: Optional[float] = Field(default=0)
     reviewer: Optional[PydanticObjectId] = None
+    mentor: Optional[PydanticObjectId] = None
 
     class Settings:
         json_encoders = {PydanticObjectId: str}

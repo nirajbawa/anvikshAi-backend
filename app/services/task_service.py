@@ -96,7 +96,7 @@ class TaskService:
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
                 f"user bio : {current_user.bio}"
-                "Strictly Return the questionnaire and keywords releted to roadmap primary domain(s) (ex: software engineering) and taks_name_gen output in the following format:\n"
+                "Strictly Return the questionnaire and keywords releted to roadmap primary domain(s) (ex: software engineering, programming .etc) and taks_name_gen output in the following format:\n"
                 "{'questions':[{'id': 'unique_id', 'question': 'Your question text', 'options': {'a': 'Option A', 'b': 'Option B', 'c': 'Option C', 'd': 'Option D'}, answer:none}], 'domains':[], 'task_name_gen':''}\n"
                 "Ensure the questions are relevant to the task and designed to gather insights that improve the roadmap quality."
             )
@@ -414,14 +414,16 @@ class TaskService:
 
                 print(pdf_path)
 
-                certificate = CertificateModel(
-                    task_id=PydanticObjectId(taskId),
-                    user=PydanticObjectId(current_user.id),
-                    task_name=task.task_name,
-                    link=pdf_path
-                )
+                certificates = await CertificateModel.find_one({"task_id": PydanticObjectId(taskId)})
+                if not certificates:
+                    certificate = CertificateModel(
+                        task_id=PydanticObjectId(taskId),
+                        user=PydanticObjectId(current_user.id),
+                        task_name=task.task_name,
+                        link=pdf_path
+                    )
 
-                await certificate.insert()
+                    await certificate.insert()
 
                 await task.update({
                     "$set": {
@@ -457,4 +459,4 @@ class TaskService:
         file_name = f"{data['name'].replace(' ', '_')}_{unique_id}_certificate.pdf"
         pdf_path = os.path.join(CERTIFICATES_DIR, file_name)
         HTML(string=html_content).write_pdf(pdf_path)
-        return pdf_path
+        return file_name

@@ -45,7 +45,7 @@ class MentorAuthSerivce:
                     status_code=400, detail="User not found!")
 
             messages = (
-                "You are an mentor categorization agent. Your task is to analyze the given resume and bio, education, stream of education to determine the mentor's primary domain(s) (ex: software engineering) of expertise. "
+                "You are an mentor categorization agent. Your task is to analyze the given resume and bio, education, stream of education to determine the mentor's domain(s) (ex: software development, software engineering) of expertise. "
                 "Based on the provided information, identify the most relevant field(s) in which the expert has significant skills and experience.\n\n"
                 f"Bio: {data.bio}\n"
                 f"Resume: {data.resume}\n\n"

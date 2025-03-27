@@ -25,7 +25,7 @@ class ExpertCoursesSerivce:
     @staticmethod
     async def get_courses(current_user: dict, page: int, limit: int) -> dict:
         try:
-            total_courses = await TaskModel.find({"domains": {"$in": current_user.domains}}).count()
+            total_courses = await TaskModel.find({"accepted": True, "rating": 0}, {"domains": {"$in": current_user.domains}}).count()
             courses = await TaskModel.find({"accepted": True, "rating": 0},
                                            {"domains": {"$in": current_user.domains}}
                                            ).skip((page - 1) * limit).limit(limit).to_list()

@@ -34,8 +34,8 @@ async def create_task(
         print("error : ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-        
-        
+
+
 @task.post("/create-roadmap/{task_id}")
 async def create_roadmap(
     current_user: Annotated[User, Depends(get_current_active_user)],
@@ -231,8 +231,9 @@ async def task_progress(
 
 
 @task.get("/download-certificate/{filename}", )
-async def download_certificate(current_user: Annotated[User, Depends(get_current_active_user)], filename: str):
+async def download_certificate(filename: str):
     file_path = os.path.join(CERTIFICATES_DIR, filename)
+    print(file_path)
 
     # Check if file exists
     if not os.path.exists(file_path):

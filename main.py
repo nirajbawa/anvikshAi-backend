@@ -14,6 +14,7 @@ from app.api.v1.routes.expert_courses import expert_courses
 from app.api.v1.routes.admin_courses import admin_courses
 from app.api.v1.routes.admin_mentor import admin_mentor
 from app.api.v1.routes.mentor_auth import mentor_auth
+from app.api.v1.routes.mentor import mentor
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.openapi.utils import get_openapi
@@ -64,8 +65,10 @@ app.include_router(admin_mentor, prefix="/admin/mentor",
 app.include_router(admin_courses, prefix="/admin/courses",
                    tags=["Admin Courses"])
 app.include_router(expert_auth, prefix="/expert/auth",
-                   tags=["Expert"])
+                   tags=["Expert Auth"])
 app.include_router(expert_courses, prefix="/expert/courses",
                    tags=["Expert Courses"])
 app.include_router(mentor_auth, prefix="/mentor/auth",
+                   tags=["Mentor Auth"])
+app.include_router(mentor, prefix="/mentor",
                    tags=["Mentor"])
