@@ -14,6 +14,7 @@ from app.api.v1.routes.expert_courses import expert_courses
 from app.api.v1.routes.admin_courses import admin_courses
 from app.api.v1.routes.admin_mentor import admin_mentor
 from app.api.v1.routes.mentor_auth import mentor_auth
+from app.api.v1.routes.user_mentor import user_mentor
 from app.api.v1.routes.mentor import mentor
 from fastapi import FastAPI
 from dotenv import load_dotenv
@@ -56,6 +57,8 @@ app.include_router(user_auth, prefix="/auth", tags=["Authentication"])
 app.include_router(task, prefix="/task", tags=["Tasks"])
 app.include_router(content, prefix="/content", tags=["Content"])
 app.include_router(payment, prefix="/payment", tags=["Payment"])
+app.include_router(user_mentor, prefix="/mentor",
+                   tags=["Mentor"])
 app.include_router(admin_auth, prefix="/admin", tags=["Admin"])
 app.include_router(admin_users, prefix="/admin/users", tags=["Admin Users"])
 app.include_router(admin_expert, prefix="/admin/expert",
@@ -70,5 +73,6 @@ app.include_router(expert_courses, prefix="/expert/courses",
                    tags=["Expert Courses"])
 app.include_router(mentor_auth, prefix="/mentor/auth",
                    tags=["Mentor Auth"])
-app.include_router(mentor, prefix="/mentor",
-                   tags=["Mentor"])
+app.include_router(mentor, prefix="/mentor/dashboard",
+                   tags=["Mentor dashboard"])
+

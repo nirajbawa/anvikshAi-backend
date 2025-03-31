@@ -1,45 +1,60 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from app.services.mentor_service import MentorService
-from app.schemas.auth_schema import ExpertOnboardingSchema, SignInSchema, Expert, Mentor
+from app.schemas.auth_schema import User
 from typing import Annotated
-from app.core.security import get_current_active_user
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from app.core.security import get_current_active_mentor
 from typing import Dict
-
+import json
+from datetime import datetime
+from app.models.messages import MessageModel
+import asyncio
 
 mentor = APIRouter()
 
-
-@mentor.get("/allocate-mentor/{courseId}")
-async def allocate(
-    current_user: Annotated[Mentor, Depends(get_current_active_user)],
-    courseId: str
+@mentor.get("/")
+async def get_dashboard_stats(
+    current_user: Annotated[User, Depends(get_current_active_mentor)]
 ):
     try:
-        result = await MentorService.request_mentor(current_user, courseId)
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await MentorService.get_dashboard(current_user)
         return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-active_connections: Dict[str, WebSocket] = {}
 
-
-@mentor.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
-    await websocket.accept()
-    active_connections[client_id] = websocket
+@mentor.get("/courses")
+async def get_courses(
+    current_user: Annotated[User, Depends(get_current_active_mentor)]
+):
     try:
-        while True:
-            data = await websocket.receive_text()
-            # Expected format: "receiver_id:message"
-            target_id, message = data.split(":", 1)
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await MentorService.get_courses(current_user)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
-            if target_id in active_connections:
-                await active_connections[target_id].send_text(f"From {client_id}: {message}")
-            else:
-                await websocket.send_text("User not found or offline.")
-    except WebSocketDisconnect:
-        del active_connections[client_id]
+
+@mentor.get("/messages/{courseId}")
+async def get_messages(
+    current_user: Annotated[User, Depends(get_current_active_mentor)],
+    courseId: str
+):
+    try:
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+        result = await MentorService.get_messages(current_user, courseId)
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content=result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        

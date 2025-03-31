@@ -35,8 +35,8 @@ class AdminUsersService:
             # Count total users
             total_users = await UserModel.find().count()
 
-            if total_users == 0:
-                raise HTTPException(status_code=404, detail="No users found")
+            # if total_users == 0:
+            #     raise HTTPException(status_code=404, detail="No users found")
 
             # Calculate pagination values
             skip = (page - 1) * limit
