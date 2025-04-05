@@ -22,3 +22,17 @@ async def invite_mentor(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@admin_mentor.get("/")
+async def get_experts(
+    current_user: Annotated[Admin, Depends(get_current_active_admin)],
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
+):
+    try:
+        result = await AdminMentorService.get_mentors(page, limit)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

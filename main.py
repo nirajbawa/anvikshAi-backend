@@ -19,15 +19,25 @@ from app.api.v1.routes.mentor import mentor
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.openapi.utils import get_openapi
+from fastapi import FastAPI
+# from apscheduler.schedulers.background import BackgroundScheduler
+# from apscheduler.triggers.cron import CronTrigger
+import datetime
+from app.core.notification import daily_task
+
 load_dotenv()
 
+# scheduler = BackgroundScheduler()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up...")
     await init_db()
+    # scheduler.add_job(daily_task, CronTrigger(hour=9, minute=0))  # Every day at 9:00 AM
+    # scheduler.start()
     await admin_init()
     yield  # Allows the app to run
+    # scheduler.shutdown()
     print("Shutting down...")
 
 
@@ -38,6 +48,10 @@ app = FastAPI(lifespan=lifespan,
               openapi_tags=[{"name": "Authentication", "description": "Login & User management (treated email as username)"}])
 
 origins = ['*']
+
+
+
+  
 
 app.add_middleware(
     CORSMiddleware,

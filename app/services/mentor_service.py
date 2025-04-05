@@ -87,7 +87,7 @@ class MentorService:
             if (not courses):
                 raise HTTPException(
                     status_code=404,
-                    detail=f"No courses exists"
+                    detail=f"No mentor exists"
                 )
 
             data = convert_to_serializable(courses)
@@ -105,7 +105,7 @@ class MentorService:
             if (not course):
                 raise HTTPException(
                     status_code=404,
-                    detail=f"No course exists"
+                    detail=f"No messages exists"
                 )
             messages = await MessageModel.find({"course_id":courseId}).to_list()
             if (not messages):

@@ -11,7 +11,8 @@ from app.services.day_n_task_service import DayNTaskSerivce
 import os
 import PyPDF2
 import io
-
+from app.models.tasks import TaskModel
+from beanie import PydanticObjectId
 
 task = APIRouter()
 
@@ -230,10 +231,26 @@ async def task_progress(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@task.get("/download-certificate/{filename}", )
-async def download_certificate(filename: str):
-    file_path = os.path.join(CERTIFICATES_DIR, filename)
-    print(file_path)
+@task.get("/download-certificate/{taskId}")
+async def download_certificate(  
+                current_user: Annotated[User, Depends(get_current_active_user)], 
+                taskId: str):
+    task = await TaskModel.find_one({
+                    "_id": PydanticObjectId(taskId),
+                    "completed": True,
+                  "user": PydanticObjectId(current_user.id)
+    })
+    
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found or not completed")
+    
+    # print(file_path)
+    pdf_path = TaskService.generate_certificate({
+            "name": current_user.first_name + " " + current_user.last_name,
+            "course": task.task_name,
+    })
+    
+    file_path = os.path.join(CERTIFICATES_DIR, pdf_path)
 
     # Check if file exists
     if not os.path.exists(file_path):
@@ -243,7 +260,7 @@ async def download_certificate(filename: str):
     return FileResponse(
         file_path,
         media_type="application/pdf",
-        filename=filename
+        filename=pdf_path
     )
 
 
@@ -263,6 +280,27 @@ async def pdf_reader(
         print(text)
 
         return JSONResponse(status_code=status.HTTP_200_OK, content={"text": text})
+    except Exception as e:
+        print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+
+@task.post("/regenerate-roadmap-feedback/{task_id}")
+async def modify_roadmap(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    task_id: str
+):
+    try:
+        if (current_user.onboarding == False):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail="Please complete onboarding first")
+
+        result = await TaskService.regenerate_roadmap_feedback(current_user, task_id)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
     except Exception as e:
         print("error : ", e)
         raise HTTPException(

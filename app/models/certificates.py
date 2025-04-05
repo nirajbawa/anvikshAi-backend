@@ -10,7 +10,7 @@ class CertificateModel(Document):
         default_factory=lambda: PydanticObjectId(ObjectId()), unique=True)
     user: Optional[PydanticObjectId] = None
     task_name: str = Field(description="name of task")
-    link: str = Field(description="certificate link")
+    # link: str = Field(description="certificate link")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc))
 

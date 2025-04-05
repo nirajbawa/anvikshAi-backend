@@ -208,3 +208,16 @@ async def get_certificates(
         print("error : ", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        
+@content.get("/certificate/${task_id}")
+async def get_certificate(
+   task_id: str,
+):
+    try:
+        result = await ContentService.get_certificate(task_id)
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

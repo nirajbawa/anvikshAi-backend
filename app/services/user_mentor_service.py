@@ -76,7 +76,7 @@ class UserMentorService:
             if (not course):
                 raise HTTPException(
                     status_code=404,
-                    detail=f"No course exists"
+                detail=f"No messages exists"
                 )
             messages = await MessageModel.find({"course_id":courseId}).to_list()
             if (not messages):

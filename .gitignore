@@ -4,3 +4,4 @@ env/
 *.env
 *.venv
 .vscode/
+app/certificate_template/*.pdf

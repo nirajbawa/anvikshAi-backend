@@ -256,6 +256,147 @@ class TaskService:
 
         return {"message": "Raodmap updated successfully", "task_id": str(task.id), "roadmap": chat_response}
 
+    
+    @staticmethod
+    async def regenerate_roadmap_feedback(current_user: dict, taskId: str) -> str:
+
+        task = await TaskModel.find_one(
+            {
+                "_id": PydanticObjectId(taskId),
+                "user": PydanticObjectId(current_user.id),
+                "rating": {"$gt": 0}
+            }
+        )
+
+
+        if (not task):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Invalid task id"
+            )
+            
+        if task.rating > 3:
+               raise HTTPException(
+                status_code=404,
+                detail=f"You can't regenerate roadmap for this task as the rating is above 3"
+            )
+            
+
+        messages = (
+            "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
+            "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description. "
+            "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
+            "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
+            f"Task: {task.description}\n"
+            f"Duration: {task.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
+            f"Daily Hours: {task.daily_hours} hours\n"
+            f"Education Level: {current_user.education}\n"
+            f"Education Stream: {current_user.stream_of_education}\n"
+            f"Preferred Language: {current_user.language_preference}\n\n"
+            f"user bio : {current_user.bio}"
+            f"questionnaire : {str(task.questionnaire)}"
+            "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+            f"previous roadmap ${task.generated_roadmap_text}"
+            f"generate a new roadmap based on this feedback : {task.feedback}"
+            f"rating : {task.rating}"
+        )
+
+        chat_response = chat(messages)
+
+        await task.update({
+            "$set": {
+                "generated_roadmap_text": chat_response,
+                "completed": False,
+                "feedback": None,
+                "rating": 0,
+                "reviewer": None
+            }
+        })
+        
+        dlc_result = await DayModel.get_motor_collection().delete_many(
+            {"belongs_to": PydanticObjectId(taskId), "user": PydanticObjectId(current_user.id)}
+        )
+
+        
+        print(dlc_result)
+        
+        await TaskService.feedback_create_course(current_user, taskId)
+
+        return {"message": "roadmap regenerated successfully", "status":True}
+    
+    
+    @staticmethod
+    async def feedback_create_course(current_user: dict, task_id: str) -> dict:
+        try:
+
+            is_task_exists = await TaskModel.find_one(
+                {"_id": PydanticObjectId(
+                    task_id), "accepted": True, "user": PydanticObjectId(current_user.id)}
+            )
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Invalid task id"
+                )
+
+            messages = (
+                f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
+                f"Divide the topics over {is_task_exists.expected_duration_months * 30} (if expected_duration_months is 0, use the user's education level to decide the timeline) days, considering {is_task_exists.daily_hours} hours of study per day. "
+                "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
+                f"Daily Hours: {is_task_exists.daily_hours} hours\n"
+                f"Education Level: {current_user.education}\n"
+                f"Education Stream: {current_user.stream_of_education}\n"
+                f"Preferred Language: {current_user.language_preference}\n\n"
+                f"user bio : {current_user.bio}"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
+                "strictly Return the output only in JSON format with fields: 'day', 'topics', 'keyword' (give base keyword of the main topic to search) (in topic only mention the topic no hours or else) (dont add any extra parameter rather than day or topics in array). (make sure output is under the token limit)"
+            )
+
+            chat_response = chat(messages)
+            cleaned_output = TaskService.clean_json_output(chat_response)
+            day_wise_task = json.loads(cleaned_output)
+            print(day_wise_task)
+
+            day_entries = [
+                DayModel(
+                    day=day_data["day"],
+                    topics=day_data["topics"][0],
+                    status=False,
+                    belongs_to=PydanticObjectId(task_id),
+                    user=PydanticObjectId(current_user.id),
+                    keyword=day_data["keyword"]
+                )
+                for day_data in day_wise_task
+            ]
+
+            # Bulk insert
+            await DayModel.insert_many(day_entries)
+
+            messages = (
+                f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}. "
+                f"Identify the major phases, and strictly return them as a pure JSON array like this: "
+                f'[{{"topic": "title", "description": "in one line"}}]'
+            )
+            chat_response = chat(messages)
+            cleaned_output = TaskService.clean_json_output(chat_response)
+            roadmap_phases = json.loads(cleaned_output)
+
+            await is_task_exists.update({
+                "$set": {
+                    "roadmap_phases": roadmap_phases,
+                    "accepted": True
+                }
+            })
+
+            return {"message": "Course created successfully"}
+
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail=str(e))
+
+    
     @staticmethod
     async def create_course(current_user: dict, task_id: str) -> dict:
         try:
@@ -407,20 +548,21 @@ class TaskService:
                     "_id": PydanticObjectId(taskId)
                 })
 
-                pdf_path = TaskService.generate_certificate({
-                    "name": current_user.first_name + " " + current_user.last_name,
-                    "course": task.task_name,
-                })
+                # pdf_path = TaskService.generate_certificate({
+                #     "name": current_user.first_name + " " + current_user.last_name,
+                #     "course": task.task_name,
+                # })
 
-                print(pdf_path)
+                # print(pdf_path)
 
                 certificates = await CertificateModel.find_one({"task_id": PydanticObjectId(taskId)})
                 if not certificates:
                     certificate = CertificateModel(
                         task_id=PydanticObjectId(taskId),
                         user=PydanticObjectId(current_user.id),
-                        task_name=task.task_name,
-                        link=pdf_path
+                        task_name=task.task_name_gen,
+                        
+                        # link=pdf_path
                     )
 
                     await certificate.insert()
@@ -460,3 +602,5 @@ class TaskService:
         pdf_path = os.path.join(CERTIFICATES_DIR, file_name)
         HTML(string=html_content).write_pdf(pdf_path)
         return file_name
+
+    

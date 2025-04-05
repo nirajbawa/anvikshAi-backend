@@ -67,8 +67,6 @@ class AdminCoursesSerivce:
 
             courses = await TaskModel.aggregate(courses_pipeline).to_list()
 
-            print(courses)
-
             def convert_to_serializable(doc):
                 if isinstance(doc, dict):
                     return {k: str(v) if isinstance(v, (ObjectId, PydanticObjectId))

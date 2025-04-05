@@ -322,6 +322,7 @@ class ContentService:
                 f"Assign marks out of 10 based on the quality and completeness of the answer. "
                 f"Strictly return the output in pure JSON format, like this: {{\"marks\": int}}",
                 f"Strictly don't return any other text."
+                f"make plagarism check and return the marks based on that. if there is plagarism then return 0 marks"
             )
 
             chat_response = chat(messages)
@@ -438,6 +439,28 @@ class ContentService:
             data = [json.loads(task.model_dump_json())
                     for task in is_task_exists]
             return {"message": "Certificates fetched successfully", "data": data}
+        except Exception as e:
+            # Logs the full error traceback
+            print(f"Error: {traceback.format_exc()}")
+            raise HTTPException(
+                status_code=500, detail=str(e))
+
+
+    @staticmethod
+    async def get_certificate(task_id: dict) -> dict:
+        try:
+            is_task_exists = await CertificateModel.find_one(
+                {"task_id": PydanticObjectId(task_id)}
+            )
+
+            if (not is_task_exists):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No task exists"
+                )
+
+            data = json.loads(is_task_exists.model_dump_json())
+            return {"message": "Certificate fetched successfully", "data": data}
         except Exception as e:
             # Logs the full error traceback
             print(f"Error: {traceback.format_exc()}")
