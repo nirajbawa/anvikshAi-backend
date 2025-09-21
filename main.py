@@ -16,6 +16,7 @@ from app.api.v1.routes.admin_mentor import admin_mentor
 from app.api.v1.routes.mentor_auth import mentor_auth
 from app.api.v1.routes.user_mentor import user_mentor
 from app.api.v1.routes.mentor import mentor
+from app.api.v1.routes.career import career
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.openapi.utils import get_openapi
@@ -50,9 +51,6 @@ app = FastAPI(lifespan=lifespan,
 origins = ['*']
 
 
-
-  
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -73,6 +71,8 @@ app.include_router(content, prefix="/content", tags=["Content"])
 app.include_router(payment, prefix="/payment", tags=["Payment"])
 app.include_router(user_mentor, prefix="/mentor",
                    tags=["Mentor"])
+app.include_router(career, prefix="/career",
+                   tags=["career"])
 app.include_router(admin_auth, prefix="/admin", tags=["Admin"])
 app.include_router(admin_users, prefix="/admin/users", tags=["Admin Users"])
 app.include_router(admin_expert, prefix="/admin/expert",

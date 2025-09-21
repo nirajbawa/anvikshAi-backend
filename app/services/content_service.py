@@ -314,17 +314,16 @@ class ContentService:
                 )
 
             data = json.loads(is_assign_exists.model_dump_json())
-
+            
             messages = (
                 f"You are an assignment checker agent. Your task is to analyze the given question and evaluate the provided assignment. "
                 f"question : {is_assign_exists.assinments_question}"
                 f"submition: {assignment}"
                 f"Assign marks out of 10 based on the quality and completeness of the answer. "
                 f"Strictly return the output in pure JSON format, like this: {{\"marks\": int}}",
-                f"Strictly don't return any other text."
-                f"make plagarism check and return the marks based on that. if there is plagarism then return 0 marks"
+                f"Strictly don't return any other text. make sure there is humaised text in pdf"
+                f"check make plagarism check and return the marks based on that. if there is plagarism then return -1 marks."
             )
-
             chat_response = chat(messages)
             print(chat_response)
             cleaned_output = TaskService.clean_json_output(chat_response)
