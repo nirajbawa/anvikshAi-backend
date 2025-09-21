@@ -28,8 +28,6 @@ from app.core.notification import daily_task
 
 load_dotenv()
 
-# scheduler = BackgroundScheduler()
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting up...")

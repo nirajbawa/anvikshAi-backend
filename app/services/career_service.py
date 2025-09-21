@@ -1,10 +1,12 @@
-from fastapi import HTTPException
 import traceback
 from app.core.gchat_with_history import format_conversation, gemini_chat
 from app.core.chat_history import get_chat_history, save_message
 from app.models.chatHistory import ChatMessage
-import uuid
 import json
+from datetime import datetime
+import uuid
+from typing import List, Dict, Any
+from fastapi import HTTPException, status
 from datetime import datetime
 
 class CareerService:
@@ -231,3 +233,224 @@ class CareerService:
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error retrieving EQ/IQ tests: {str(e)}")
+        
+   
+    @staticmethod
+    async def evaluate_test_answers(
+        current_user: dict,
+        window_id: str,
+        test_id: str,
+        user_answers: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Evaluate user's answers against the correct answers for a specific test
+        
+        Args:
+            current_user: Current user object
+            window_id: Chat window identifier
+            test_id: Specific test identifier
+            user_answers: List of user answers in format:
+                [
+                    {
+                        "questionId": "WEBDEV-IQ-001",
+                        "selectedOption": "B"  # A, B, C, or D
+                    },
+                    ...
+                ]
+        
+        Returns:
+            Test score and basic results
+        """
+        try:
+            # Get the test from database
+            test_data = await CareerService._get_test_data(
+                str(current_user.id), window_id, test_id
+            )
+            
+            # Validate user answers
+            validated_answers = CareerService._validate_user_answers(
+                user_answers, test_data
+            )
+            
+            # Evaluate answers
+            results = await CareerService._evaluate_answers(
+                test_data, validated_answers
+            )
+            
+            return results
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error evaluating test answers: {str(e)}"
+            )
+
+    @staticmethod
+    async def _get_test_data(user_id: str, window_id: str, test_id: str) -> Dict[str, Any]:
+        """Retrieve test data from database"""
+        chat_doc = await ChatMessage.find_one(
+            ChatMessage.user_id == user_id,
+            ChatMessage.window_id == window_id
+        )
+        
+        if not chat_doc or not hasattr(chat_doc, "eq_iq_tests") or not chat_doc.eq_iq_tests:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No tests found for this window."
+            )
+        
+        # Find the specific test
+        test_data = None
+        for test in chat_doc.eq_iq_tests:
+            if test.get("testId") == test_id:
+                test_data = test
+                break
+        
+        if not test_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Test with ID {test_id} not found."
+            )
+        
+        return test_data
+
+    @staticmethod
+    def _validate_user_answers(
+        user_answers: List[Dict[str, Any]], 
+        test_data: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Validate and format user answers"""
+        validated_answers = []
+        questions = test_data.get("questions", [])
+        
+        # Create question mapping for quick lookup
+        question_map = {q.get("questionId"): q for q in questions}
+        
+        for answer in user_answers:
+            question_id = answer.get("questionId")
+            selected_option = answer.get("selectedOption")
+            
+            if question_id not in question_map:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Question ID {question_id} not found in test."
+                )
+            
+            question = question_map[question_id]
+            options = question.get("options", [])
+            
+            # Validate selected option (A, B, C, D)
+            if selected_option is None or not isinstance(selected_option, str):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid selected option for question {question_id}. Must be A, B, C, or D."
+                )
+            
+            selected_option = selected_option.upper().strip()
+            if selected_option not in ['A', 'B', 'C', 'D']:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Selected option must be A, B, C, or D for question {question_id}."
+                )
+            
+            # Check if selected option exists in the question's options
+            option_index = ord(selected_option) - ord('A')
+            if option_index >= len(options):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Selected option {selected_option} is not valid for question {question_id}."
+                )
+            
+            validated_answers.append({
+                "questionId": question_id,
+                "selectedOption": selected_option,
+                "selectedIndex": option_index,  # Convert to 0-based index for evaluation
+                "timestamp": datetime.utcnow().isoformat()
+            })
+        
+        return validated_answers
+
+    @staticmethod
+    async def _evaluate_answers(
+        test_data: Dict[str, Any], 
+        user_answers: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Evaluate user answers and calculate scores"""
+        questions = test_data.get("questions", [])
+        total_questions = len(questions)
+        
+        if total_questions == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Test contains no questions."
+            )
+        
+        # Create answer mapping for quick lookup
+        user_answers_map = {ans["questionId"]: ans for ans in user_answers}
+        
+        correct_count = 0
+        detailed_results = []
+        
+        for question in questions:
+            question_id = question.get("questionId")
+            user_answer = user_answers_map.get(question_id)
+            correct_answer = question.get("correct_answer", 0)
+            
+            # Convert correct_answer to integer if it's a string (A, B, C, D)
+            if isinstance(correct_answer, str):
+                # Handle string format like "B", "C", etc.
+                correct_answer = correct_answer.upper().strip()
+                if correct_answer in ['A', 'B', 'C', 'D']:
+                    correct_answer_index = ord(correct_answer) - ord('A')
+                else:
+                    # Default to 0 if invalid string format
+                    correct_answer_index = 0
+            else:
+                # Assume it's already a 0-based index
+                correct_answer_index = int(correct_answer)
+            
+            if user_answer:
+                # Compare the 0-based indices
+                is_correct = user_answer["selectedIndex"] == correct_answer_index
+                if is_correct:
+                    correct_count += 1
+            else:
+                is_correct = False  # Question not answered
+            
+            # Build simple result
+            detailed_result = {
+                "questionId": question_id,
+                "userAnswer": user_answer["selectedOption"] if user_answer else "Not answered",
+                "correctAnswer": chr(ord('A') + correct_answer_index),  # Convert index to A, B, C, D
+                "isCorrect": is_correct
+            }
+            
+            detailed_results.append(detailed_result)
+        
+        # Calculate overall score
+        overall_score = round((correct_count / total_questions) * 100, 2) if total_questions > 0 else 0
+        
+        return {
+            "testId": test_data.get("testId"),
+            "domain": test_data.get("domain"),
+            "overallScore": overall_score,
+            "correctAnswers": correct_count,
+            "totalQuestions": total_questions,
+            "percentage": overall_score,
+            "performanceCategory": CareerService._get_performance_category(overall_score),
+            "detailedResults": detailed_results,
+            "submittedAt": datetime.utcnow().isoformat()
+        }
+    
+    @staticmethod
+    def _get_performance_category(score: float) -> str:
+        """Categorize performance level"""
+        if score >= 90: return "Exceptional"
+        elif score >= 80: return "Excellent"
+        elif score >= 70: return "Very Good"
+        elif score >= 60: return "Good"
+        elif score >= 50: return "Average"
+        elif score >= 40: return "Below Average"
+        else: return "Needs Improvement"

@@ -1,14 +1,12 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from app.schemas.auth_schema import SignUpSchema, VerifyOTPSchema, SignInSchema, User, Onboarding
 from app.services.auth_service import AuthService
-from fastapi import status, BackgroundTasks
 from app.core.security import get_current_active_user
-from fastapi.security import OAuth2PasswordRequestForm
 from app.services.career_service import CareerService
-from app.schemas.chat_message_schema import ChatMessageSchema
+from app.schemas.chat_message_schema import ChatMessageSchema, AnswerSubmission
 
 career = APIRouter()
 
@@ -67,6 +65,42 @@ async def get_career_history(
 
     except Exception as e:
         print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@career.post("/evaluate-test/{windowId}/{testId}")
+async def evaluate_test(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    windowId: str,
+    testId: str,
+    submission: AnswerSubmission
+):
+    """
+    Evaluate user's test answers and return comprehensive results
+    """
+    try:
+        if current_user.onboarding is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please complete onboarding first"
+            )
+
+        results = await CareerService.evaluate_test_answers(
+            current_user=current_user,
+            window_id=windowId,
+            test_id=testId,
+            user_answers=submission.answers
+        )
+
+        return results
+
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        print("Error evaluating test:", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
