@@ -7,7 +7,8 @@ class ChatMessage(Document):
     user_id: str
     window_id: str
     messages: List[Dict] = Field(default_factory=list)
-    eq_iq_tests: List[Dict] = Field(default_factory=list)  # <-- NEW
+    eq_iq_tests: List[Dict] = Field(default_factory=list)
+    test_results: List[Dict] = Field(default_factory=list)  # <-- NEW FIELD
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     class Settings:

@@ -6,7 +6,7 @@ def chat(data: str):
     try:
         genai.configure(api_key=os.getenv("AI_API_KEY"))
         model = genai.GenerativeModel(
-            'gemini-2.0-flash')  # or gemini-pro-vision, or
+            'gemini-2.0-pro')  # or gemini-pro-vision, or
         response_stream = model.generate_content(data, stream=True)
         output_chunks = []
         for chunk in response_stream:

@@ -70,6 +70,26 @@ async def get_career_history(
             detail=str(e)
         )
 
+@career.get("/history")
+async def get_career_history(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+):
+    try:
+        if current_user.onboarding is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please complete onboarding first"
+            )
+
+        result = await CareerService.get_all_by_user_id_minimal(str(current_user.id))
+        return JSONResponse(status_code=status.HTTP_200_OK, content=result)
+
+    except Exception as e:
+        print("error : ", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @career.post("/evaluate-test/{windowId}/{testId}")
 async def evaluate_test(
@@ -88,13 +108,7 @@ async def evaluate_test(
                 detail="Please complete onboarding first"
             )
 
-        results = await CareerService.evaluate_test_answers(
-            current_user=current_user,
-            window_id=windowId,
-            test_id=testId,
-            user_answers=submission.answers
-        )
-
+        results = await CareerService.submit_test_answers(current_user, windowId, testId, submission.dict())
         return results
 
     except HTTPException as he:
@@ -104,4 +118,33 @@ async def evaluate_test(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
+        )
+        
+        
+@career.post("/career-feedback/{windowId}")
+async def get_career_feedback(
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    windowId: str
+):
+    """
+    Generate comprehensive career feedback based on chat history and test scores
+    """
+    try:
+        if current_user.onboarding is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please complete onboarding first"
+            )
+
+        results = await CareerService.generate_career_feedback(
+            current_user=current_user,
+            window_id=windowId,
+        )
+        
+        return JSONResponse(status_code=status.HTTP_200_OK, content=results)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating career feedback: {str(e)}"
         )
