@@ -6,7 +6,7 @@ class EmailSettings(BaseModel):
     MAIL_USERNAME: str = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD")
     MAIL_FROM: str = os.getenv("MAIL_USERNAME")
-    MAIL_PORT: int = 587  # Changed to 587 (works better on cloud platforms)
+    MAIL_PORT: int = 465  # Changed to 587 (works better on cloud platforms)
     MAIL_SERVER: str = "smtp.gmail.com"
     MAIL_SSL_TLS: bool = False  # Changed to False when using port 587
     MAIL_STARTTLS: bool = True  # Changed to True for port 587
