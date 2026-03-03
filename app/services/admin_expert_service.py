@@ -13,14 +13,20 @@ from app.schemas.auth_schema import ExpertInviteSchema, ExpertEmailSchema
 import os
 from app.models.expert import ExpertModel
 from fastapi.templating import Jinja2Templates
-from fastapi_mail import FastMail, MessageSchema
+from app.core.http_email import http_email_service
 from app.core.email import conf
 from beanie import PydanticObjectId
 import json
+import logging
 import math
 
 templates = Jinja2Templates(directory="app/email_templates")
 ACCESS_TOKEN_EXPIRE_MINUTES = 7200  # ✅ Fix: Use minutes, not days
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 
 class ExpertProjection(BaseModel):
@@ -80,13 +86,15 @@ class AdminExpertService:
         html_content = templates.get_template(
             "expert_email.html").render(template_data)
 
-        message = MessageSchema(
-            recipients=[
-                recipient], subject=subject, body=html_content, subtype="html"
-        )
+        response = await http_email_service.send_email(
+                recipient=recipient,
+                subject=subject,
+                html_content=html_content
+            )
+                    
+        logger.info(f"Email sent successfully to {recipient}")
+        logger.debug(f"Email service response: {response}")
 
-        mail = FastMail(conf)
-        await mail.send_message(message)
 
     @staticmethod
     async def get_experts(page: int = Query(1, ge=1), limit: int = Query(10, ge=1, le=100)) -> dict:
