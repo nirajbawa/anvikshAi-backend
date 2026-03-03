@@ -10,13 +10,14 @@ from app.models.articles import ArticleModel
 from app.models.assignments import AssignmentModel
 from app.models.quizzes import QuizModel
 from yt_dlp import YoutubeDL
-from googlesearch import search
+from ddgs import DDGS
 
 
 class DayNTaskSerivce:
     @staticmethod
     async def create_day_n_task(current_user: dict, dayn: str, task_id: str) -> dict:
         try:
+            print("hello")
             is_day_exists = await DayModel.find_one({
                 "_id": PydanticObjectId(dayn),
                 "belongs_to": PydanticObjectId(task_id),
@@ -170,25 +171,20 @@ class DayNTaskSerivce:
         unique_links = set()
         results = []
 
-        print("hello 2")
+        with DDGS() as ddgs:
+            for topic in topics:
+                query = topic + " in " + keyword
+                results_list = ddgs.text(query, max_results=1)
 
-        for topic in topics:
-            query = topic + " in " + keyword
-            try:
-                found = False
-                # Set num_results to 1 per topic
-                for result in search(query, num_results=1):
-                    if result not in unique_links:
-                        unique_links.add(result)
-                        results.append({"topic": topic, "link": result})
-                        found = True
-                        break  # Only take the first valid link
-
-                if not found:
-                    print(
-                        f"No articles found for topic '{topic}'. Skipping...")
-            except:
-                print(f"Skipping topic '{topic}' due to an unexpected issue.")
+                for r in results_list:
+                    link = r["href"]
+                    if link not in unique_links:
+                        unique_links.add(link)
+                        results.append({
+                            "topic": topic,
+                            "link": link
+                        })
+                        break
 
         return results
 

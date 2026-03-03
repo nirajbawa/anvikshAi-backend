@@ -102,11 +102,11 @@ class TaskService:
             )
 
             chat_response = chat(messages)
+            
 
             cleaned_output = TaskService.clean_json_output(chat_response)
             questionier = json.loads(cleaned_output)
 
-            print(chat_response)
             domains = list(map(str.lower, questionier["domains"]))
 
             # Create and insert task
