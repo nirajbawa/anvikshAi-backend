@@ -5,7 +5,7 @@ import os
 
 class HTTPEmailService:
     def __init__(self):
-        self.base_url = "http://65.2.30.191"  # Your EC2 instance
+        self.base_url = os.getenv("EMAIL_SERVICE_URL")  # Your EC2 instance
         self.timeout = 30.0  # seconds
         self.api_key = os.getenv("EMAIL_SERVICE_API_KEY", "your-api-key-here")  # Set this in your environment variables
 
@@ -38,6 +38,7 @@ class HTTPEmailService:
                 )
                 
                 response.raise_for_status()
+
                 return response.json()
                 
         except httpx.TimeoutException:
