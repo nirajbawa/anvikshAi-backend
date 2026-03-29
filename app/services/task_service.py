@@ -95,9 +95,9 @@ class TaskService:
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
-                f"user bio : {current_user.bio}"
-                "Strictly Return the questionnaire and keywords releted to roadmap primary domain(s) (ex: software engineering, programming .etc) and taks_name_gen output in the following format:\n"
-                "{'questions':[{'id': 'unique_id', 'question': 'Your question text', 'options': {'a': 'Option A', 'b': 'Option B', 'c': 'Option C', 'd': 'Option D'}, answer:none}], 'domains':[], 'task_name_gen':''}\n"
+                f"user bio : {current_user.bio}\n\n"
+                "Strictly return the questionnaire, keywords related to roadmap primary domain(s) (ex: software engineering, programming, etc), and task_name_gen output ONLY in the following valid JSON format:\n"
+                '{"questions":[{"id": "unique_id", "question": "Your question text", "options": {"a": "Option A", "b": "Option B", "c": "Option C", "d": "Option D"}, "answer": null}], "domains":[], "task_name_gen":""}\n'
                 "Ensure the questions are relevant to the task and designed to gather insights that improve the roadmap quality."
             )
 
@@ -148,7 +148,7 @@ class TaskService:
 
             messages = (
                 "You are a roadmap generator agent. Your task is to generate structured learning roadmaps based on the user's inputs. "
-                "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description."
+                "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description.\n"
                 "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
                 "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
                 f"Task: {task.description}\n"
@@ -156,9 +156,9 @@ class TaskService:
                 f"Daily Hours: {task.daily_hours} hours\n"
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
-                f"Preferred Language: {current_user.language_preference}\n\n",
-                f"questionnaire : {str(data.questions)}"
-                f"user bio : {current_user.bio}"
+                f"Preferred Language: {current_user.language_preference}\n\n"
+                f"Questionnaire: {str(data.questions)}\n"
+                f"User Bio: {current_user.bio}\n\n"
                 "At the end of the roadmap, provide future courses and learning suggestions on the last day."
             )
 
@@ -191,7 +191,13 @@ class TaskService:
                 status_code=500, detail=str(e))
 
     @staticmethod
-    def clean_json_output(output: str) -> str:
+    def clean_json_output(output) -> str:
+        if isinstance(output, dict):
+            return json.dumps(output)
+            
+        if not isinstance(output, str):
+            output = str(output)
+            
         # Remove code block markers
         if output.startswith("```json"):
             output = output[len("```json"):].strip()
@@ -233,17 +239,17 @@ class TaskService:
             "The user will provide a task description, expected duration (in months), daily study hours, and educational background, questionnaire about task description. "
             "Generate a step-by-step roadmap with milestones, keeping descriptions short and focused (avoid excessive detail). "
             "Tailor the roadmap based on the user's educational level and stream to optimize their learning path.\n\n"
-            f"fix this task bsed on this data : {data}"
+            f"Fix this task based on this data: {data}\n"
             f"Task: {task.description}\n"
             f"Duration: {task.expected_duration_months} months (if expected_duration_months is 0, use the user's education level to decide the timeline)\n"
             f"Daily Hours: {task.daily_hours} hours\n"
             f"Education Level: {current_user.education}\n"
             f"Education Stream: {current_user.stream_of_education}\n"
             f"Preferred Language: {current_user.language_preference}\n\n"
-            f"user bio : {current_user.bio}"
-            f"questionnaire : {str(task.questionnaire)}"
-            "At the end of the roadmap, provide future courses and learning suggestions on the last day."
-            f"previous roadmap ${task.generated_roadmap_text}"
+            f"User Bio: {current_user.bio}\n"
+            f"Questionnaire: {str(task.questionnaire)}\n\n"
+            "At the end of the roadmap, provide future courses and learning suggestions on the last day.\n"
+            f"Previous roadmap: {task.generated_roadmap_text}"
         )
 
         chat_response = chat(messages)
@@ -293,12 +299,12 @@ class TaskService:
             f"Education Level: {current_user.education}\n"
             f"Education Stream: {current_user.stream_of_education}\n"
             f"Preferred Language: {current_user.language_preference}\n\n"
-            f"user bio : {current_user.bio}"
-            f"questionnaire : {str(task.questionnaire)}"
-            "At the end of the roadmap, provide future courses and learning suggestions on the last day."
-            f"previous roadmap ${task.generated_roadmap_text}"
-            f"generate a new roadmap based on this feedback : {task.feedback}"
-            f"rating : {task.rating}"
+            f"User Bio: {current_user.bio}\n"
+            f"Questionnaire: {str(task.questionnaire)}\n\n"
+            "At the end of the roadmap, provide future courses and learning suggestions on the last day.\n"
+            f"Previous roadmap: {task.generated_roadmap_text}\n"
+            f"Generate a new roadmap based on this feedback: {task.feedback}\n"
+            f"Rating: {task.rating}"
         )
 
         chat_response = chat(messages)
@@ -342,14 +348,16 @@ class TaskService:
             messages = (
                 f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
                 f"Divide the topics over {is_task_exists.expected_duration_months * 30} (if expected_duration_months is 0, use the user's education level to decide the timeline) days, considering {is_task_exists.daily_hours} hours of study per day. "
-                "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
+                "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.\n"
                 f"Daily Hours: {is_task_exists.daily_hours} hours\n"
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
-                f"user bio : {current_user.bio}"
-                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
-                "strictly Return the output only in JSON format with fields: 'day', 'topics', 'keyword' (give base keyword of the main topic to search) (in topic only mention the topic no hours or else) (dont add any extra parameter rather than day or topics in array). (make sure output is under the token limit)"
+                f"User Bio: {current_user.bio}\n\n"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day.\n"
+                "Strictly return the output ONLY in valid JSON array format exactly as follows:\n"
+                '[{"day": "1", "topics": ["Topic name only"], "keyword": "base keyword"}]\n'
+                "Do not include any other text format, markdown wrapper, or fields outside this strict JSON structure."
             )
 
             chat_response = chat(messages)
@@ -374,8 +382,9 @@ class TaskService:
 
             messages = (
                 f"You are a roadmap generator agent. Your task is to analyze the given roadmap description: {is_task_exists.generated_roadmap_text}. "
-                f"Identify the major phases, and strictly return them as a pure JSON array like this: "
-                f'[{{"topic": "title", "description": "in one line"}}]'
+                f"Identify the major phases, and strictly return them as a pure valid JSON array exactly like this:\n"
+                f'[{{"topic": "title", "description": "in one line"}}]\n'
+                "Output absolutely nothing else, no markdown formatting."
             )
             chat_response = chat(messages)
             cleaned_output = TaskService.clean_json_output(chat_response)
@@ -414,14 +423,16 @@ class TaskService:
             messages = (
                 f"You are a roadmap generator agent. Your task is to create a structured, day-by-day learning plan based on the phases of the existing roadmap: {is_task_exists.generated_roadmap_text}. "
                 f"Divide the topics over {is_task_exists.expected_duration_months * 30} (if expected_duration_months is 0, use the user's education level to decide the timeline) days, considering {is_task_exists.daily_hours} hours of study per day. "
-                "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.",
+                "Include weekly milestones, review sessions, and optional practice tasks to ensure steady progress.\n"
                 f"Daily Hours: {is_task_exists.daily_hours} hours\n"
                 f"Education Level: {current_user.education}\n"
                 f"Education Stream: {current_user.stream_of_education}\n"
                 f"Preferred Language: {current_user.language_preference}\n\n"
-                f"user bio : {current_user.bio}"
-                "At the end of the roadmap, provide future courses and learning suggestions on the last day."
-                "strictly Return the output only in JSON format with fields: 'day', 'topics', 'keyword' (give base keyword of the main topic to search) (in topic only mention the topic no hours or else) (dont add any extra parameter rather than day or topics in array). (make sure output is under the token limit)"
+                f"User Bio: {current_user.bio}\n\n"
+                "At the end of the roadmap, provide future courses and learning suggestions on the last day.\n"
+                "Strictly return the output ONLY in valid JSON array format exactly as follows:\n"
+                '[{"day": "1", "topics": ["Topic name only"], "keyword": "base keyword"}]\n'
+                "Do not include any other text format, markdown wrapper, or fields outside this strict JSON structure."
             )
 
             chat_response = chat(messages)
