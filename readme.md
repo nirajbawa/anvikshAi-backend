@@ -46,7 +46,7 @@ Once the server is running, open your browser or use an API client (like Postman
 
 ## Deactivating the Virtual Environment
 
-When you're done, deactivate the virtual environment with:
+When you're done, deactivate the virtual environment:
 ```sh
 deactivate
 ```
